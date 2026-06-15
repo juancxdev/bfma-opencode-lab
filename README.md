@@ -50,6 +50,26 @@ go run ./cmd/bfma-pilot \
   --timeout 10m
 ```
 
+## Reporte visual para asesor/anexos
+
+Para generar un dashboard HTML autocontenido desde los logs JSONL:
+
+```bash
+go run ./cmd/bfma-report \
+  --run logs/run_20260615_122925 \
+  --out reports/run_20260615_122925/index.html
+```
+
+Para un reporte comparativo G1/G2/G3, usar un run que contenga los tres grupos:
+
+```bash
+go run ./cmd/bfma-report \
+  --run logs/run_20260615_172800 \
+  --out reports/run_20260615_172800/index.html
+```
+
+El reporte se puede abrir directamente en el navegador y permite imprimir/guardar como PDF o tomar screenshots para anexos de tesis.
+
 ## Principio metodológico
 
 Los agentes no devuelven métricas ni logs de memoria. El runner controla el contexto, observa OpenCode y registra eventos experimentales en JSONL.
