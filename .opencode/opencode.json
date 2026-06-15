@@ -1,0 +1,39 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "opencode-go/deepseek-v4-flash",
+  "agent": {
+    "g1-summary-agent": {
+      "description": "G1 - agente experimental con resumen incremental tradicional",
+      "mode": "primary",
+      "prompt": "{file:./.opencode/agents/g1-summary-agent.md}",
+      "tools": {
+        "bash": false,
+        "edit": false,
+        "write": false,
+        "read": false
+      }
+    },
+    "g2-persistent-agent": {
+      "description": "G2 - agente experimental con memoria persistente aislada",
+      "mode": "primary",
+      "prompt": "{file:./.opencode/agents/g2-persistent-agent.md}",
+      "tools": {
+        "bash": false,
+        "edit": false,
+        "write": false,
+        "read": false
+      }
+    },
+    "g3-bfma-agent": {
+      "description": "G3 - agente experimental con contexto seleccionado por BFMA",
+      "mode": "primary",
+      "prompt": "{file:./.opencode/agents/g3-bfma-agent.md}",
+      "tools": {
+        "bash": false,
+        "edit": false,
+        "write": false,
+        "read": false
+      }
+    }
+  }
+}

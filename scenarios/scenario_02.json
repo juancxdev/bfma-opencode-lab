@@ -1,0 +1,64 @@
+{
+  "scenario_id": "scenario_02",
+  "title": "Mesa de ayuda universitaria",
+  "description": "Escenario piloto para evaluar memoria de políticas, prioridades y excepciones.",
+  "turns": [
+    {
+      "turn": 1,
+      "user_prompt": "Diseñaremos una mesa de ayuda universitaria. Recordá estas reglas: tickets críticos se atienden en 30 minutos, tickets normales en 24 horas, y todo ticket debe tener categoría y responsable.",
+      "memory_hints": [
+        {"content": "Los tickets críticos se atienden en 30 minutos.", "type": "constraint", "importance": 0.95, "tags": ["SLA", "crítico"]},
+        {"content": "Los tickets normales se atienden en 24 horas.", "type": "constraint", "importance": 0.85, "tags": ["SLA", "normal"]},
+        {"content": "Todo ticket debe tener categoría y responsable.", "type": "constraint", "importance": 0.9, "tags": ["ticket", "responsable"]}
+      ]
+    },
+    {
+      "turn": 2,
+      "user_prompt": "Habrá categorías para hardware, software, red y cuentas institucionales. Los tickets de red caída siempre serán críticos.",
+      "memory_hints": [
+        {"content": "Las categorías son hardware, software, red y cuentas institucionales.", "type": "fact", "importance": 0.8, "tags": ["categorías"]},
+        {"content": "Los tickets de red caída siempre son críticos.", "type": "constraint", "importance": 0.95, "tags": ["red", "crítico"]}
+      ]
+    },
+    {
+      "turn": 3,
+      "user_prompt": "El equipo decidió que las cuentas bloqueadas tendrán prioridad alta, pero no crítica, salvo que afecten a docentes en horario de clase.",
+      "memory_hints": [
+        {"content": "Las cuentas bloqueadas tienen prioridad alta, no crítica.", "type": "decision", "importance": 0.8, "tags": ["cuentas", "prioridad"]},
+        {"content": "Las cuentas bloqueadas de docentes en horario de clase son críticas.", "type": "constraint", "importance": 0.9, "tags": ["docentes", "crítico"]}
+      ]
+    },
+    {
+      "turn": 4,
+      "user_prompt": "Propón el flujo de atención de tickets y repetí las reglas críticas que condicionan el diseño.",
+      "memory_hints": []
+    }
+  ],
+  "final_questions": [
+    {"id": "q1", "question": "¿En cuánto tiempo se atienden tickets críticos?", "expected_answer": "30 minutos."},
+    {"id": "q2", "question": "¿Qué tickets de red se consideran críticos?", "expected_answer": "Tickets de red caída."},
+    {"id": "q3", "question": "¿Cuándo una cuenta bloqueada se vuelve crítica?", "expected_answer": "Cuando afecta a docentes en horario de clase."}
+  ],
+  "ground_truth": {
+    "critical_facts": [
+      "tickets críticos en 30 minutos",
+      "tickets normales en 24 horas",
+      "todo ticket tiene categoría y responsable",
+      "categorías hardware, software, red y cuentas institucionales",
+      "red caída siempre crítica",
+      "cuentas bloqueadas prioridad alta salvo docentes en clase"
+    ],
+    "expected_constraints": [
+      "30 minutos críticos",
+      "24 horas normales",
+      "categoría y responsable",
+      "red caída crítica",
+      "docente en clase crítico"
+    ],
+    "expected_contradictions": [
+      "tickets críticos en 24 horas",
+      "red caída como ticket normal",
+      "cuentas bloqueadas siempre críticas"
+    ]
+  }
+}

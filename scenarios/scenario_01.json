@@ -1,0 +1,62 @@
+{
+  "scenario_id": "scenario_01",
+  "title": "Sistema académico de matrícula",
+  "description": "Escenario piloto para evaluar conservación de requisitos, restricciones y decisiones de arquitectura.",
+  "turns": [
+    {
+      "turn": 1,
+      "user_prompt": "Estamos diseñando un sistema académico de matrícula. Recordá que debe autenticar con correo institucional, soportar 800 estudiantes concurrentes y responder en máximo 2 segundos.",
+      "memory_hints": [
+        {"content": "El sistema debe autenticar con correo institucional.", "type": "constraint", "importance": 0.95, "tags": ["autenticación", "correo institucional"]},
+        {"content": "El sistema debe soportar 800 estudiantes concurrentes.", "type": "constraint", "importance": 0.9, "tags": ["concurrencia", "rendimiento"]},
+        {"content": "La latencia máxima permitida es 2 segundos.", "type": "constraint", "importance": 0.9, "tags": ["latencia", "rendimiento"]}
+      ]
+    },
+    {
+      "turn": 2,
+      "user_prompt": "El sistema tendrá módulos de matrícula, pagos y consulta de horarios. Propón una arquitectura inicial sin olvidar las restricciones anteriores.",
+      "memory_hints": [
+        {"content": "Los módulos principales son matrícula, pagos y consulta de horarios.", "type": "fact", "importance": 0.85, "tags": ["módulos", "alcance"]}
+      ]
+    },
+    {
+      "turn": 3,
+      "user_prompt": "Por decisión del comité, los pagos se integrarán con una pasarela externa y toda operación de matrícula debe quedar auditada.",
+      "memory_hints": [
+        {"content": "Los pagos se integrarán con una pasarela externa.", "type": "decision", "importance": 0.8, "tags": ["pagos", "integración"]},
+        {"content": "Toda operación de matrícula debe quedar auditada.", "type": "constraint", "importance": 0.95, "tags": ["auditoría", "matrícula"]}
+      ]
+    },
+    {
+      "turn": 4,
+      "user_prompt": "Ahora diseña los endpoints principales y menciona las restricciones críticas que no se deben perder.",
+      "memory_hints": []
+    }
+  ],
+  "final_questions": [
+    {"id": "q1", "question": "¿Qué método de autenticación se exigió?", "expected_answer": "Correo institucional."},
+    {"id": "q2", "question": "¿Cuál era la latencia máxima?", "expected_answer": "2 segundos."},
+    {"id": "q3", "question": "¿Qué operación debe auditarse?", "expected_answer": "Toda operación de matrícula."}
+  ],
+  "ground_truth": {
+    "critical_facts": [
+      "autenticación con correo institucional",
+      "800 estudiantes concurrentes",
+      "latencia máxima de 2 segundos",
+      "módulos de matrícula, pagos y consulta de horarios",
+      "pagos con pasarela externa",
+      "auditoría de operaciones de matrícula"
+    ],
+    "expected_constraints": [
+      "correo institucional",
+      "800 concurrentes",
+      "2 segundos",
+      "auditoría de matrícula"
+    ],
+    "expected_contradictions": [
+      "usar autenticación anónima",
+      "permitir latencia mayor a 2 segundos",
+      "omitir auditoría de matrícula"
+    ]
+  }
+}
