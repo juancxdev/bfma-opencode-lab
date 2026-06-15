@@ -21,6 +21,8 @@ func main() {
 		simulateLLM = flag.Bool("simulate-llm", false, "simulate LLM responses; validates runner/memory/logging only")
 		dryRunAlias = flag.Bool("dry-run", false, "deprecated alias for --simulate-llm")
 		timeout     = flag.Duration("timeout", 5*time.Minute, "timeout per OpenCode turn")
+		retries     = flag.Int("retries", 0, "number of retries per OpenCode turn after a failed attempt")
+		fromTurn    = flag.Int("from-turn", 0, "resume from this scenario turn after reconstructing prior memory without LLM calls")
 	)
 	flag.Parse()
 
@@ -43,6 +45,8 @@ func main() {
 		Model:       *model,
 		DryRun:      *simulateLLM || *dryRunAlias,
 		Timeout:     *timeout,
+		Retries:     *retries,
+		FromTurn:    *fromTurn,
 	}
 	r := runner.New(cfg, opencode.NewCLIClient("opencode"))
 	result, err := r.Run(context.Background())

@@ -1,0 +1,222 @@
+{
+  "scenario_id": "scenario_03_gestion_academica_longitudinal",
+  "title": "Sistema de Gestión Académica Universitaria longitudinal",
+  "description": "Escenario longitudinal realista para evaluar summary drift, memoria persistente y BFMA en un proyecto de software que evoluciona por módulos, cambios de requisitos y una interrupción disruptiva poco relacionada.",
+  "turns": [
+    {
+      "turn": 1,
+      "user_prompt": "Vamos a iniciar un proyecto llamado Sistema de Gestión Académica Universitaria para la FIIS. La primera versión tendrá registro de notas, gestión de docentes y gestión de estudiantes. La autenticación debe ser con correo institucional y toda modificación académica debe quedar auditada.",
+      "memory_hints": [
+        {"content": "El proyecto principal es el Sistema de Gestión Académica Universitaria para la FIIS.", "type": "fact", "importance": 0.95, "tags": ["proyecto", "academico", "FIIS"]},
+        {"content": "Los módulos iniciales son registro de notas, gestión de docentes y gestión de estudiantes.", "type": "fact", "importance": 0.9, "tags": ["modulos", "notas", "docentes", "estudiantes"]},
+        {"content": "La autenticación del sistema académico debe realizarse con correo institucional.", "type": "constraint", "importance": 0.95, "tags": ["autenticacion", "correo institucional"]},
+        {"content": "Toda modificación académica debe quedar auditada con usuario, fecha, hora y motivo.", "type": "constraint", "importance": 0.95, "tags": ["auditoria", "academico"]}
+      ]
+    },
+    {
+      "turn": 2,
+      "user_prompt": "Para registro de notas, cada docente podrá registrar notas parciales, nota final y observaciones. Los estudiantes solo podrán consultar sus propias notas. El cierre académico bloqueará cambios posteriores.",
+      "memory_hints": [
+        {"content": "El módulo de registro de notas permite registrar notas parciales, nota final y observaciones.", "type": "fact", "importance": 0.82, "tags": ["notas", "docentes"]},
+        {"content": "Los estudiantes solo pueden consultar sus propias notas.", "type": "constraint", "importance": 0.88, "tags": ["estudiantes", "notas", "seguridad"]},
+        {"content": "El cierre académico bloquea cambios posteriores en el registro de notas.", "type": "constraint", "importance": 0.94, "tags": ["notas", "cierre academico", "bloqueo"]},
+        {"content": "Las observaciones de notas son visibles para el docente y para el estudiante correspondiente.", "type": "fact", "importance": 0.55, "tags": ["notas", "observaciones"]}
+      ]
+    },
+    {
+      "turn": 3,
+      "user_prompt": "Para gestión de docentes, se guardará categoría, departamento académico, correo institucional y estado activo o inactivo. Por ahora también se pensó incluir carga horaria dentro de docentes.",
+      "memory_hints": [
+        {"content": "La gestión de docentes almacena categoría, departamento académico, correo institucional y estado activo o inactivo.", "type": "fact", "importance": 0.82, "tags": ["docentes", "datos"]},
+        {"content": "Inicialmente se pensó gestionar carga horaria dentro del módulo de docentes.", "type": "fact", "importance": 0.5, "tags": ["docentes", "carga horaria", "inicial"]},
+        {"content": "El correo institucional del docente será un dato obligatorio.", "type": "constraint", "importance": 0.75, "tags": ["docentes", "correo institucional"]},
+        {"content": "El estado activo o inactivo del docente condiciona si puede registrar notas.", "type": "constraint", "importance": 0.8, "tags": ["docentes", "notas"]}
+      ]
+    },
+    {
+      "turn": 4,
+      "user_prompt": "Para gestión de estudiantes, se requiere código universitario, carrera, plan vigente, ciclo actual y estado académico. El color sugerido para las pantallas de estudiantes será azul claro y los botones primarios podrían decir Guardar estudiante.",
+      "memory_hints": [
+        {"content": "La gestión de estudiantes almacena código universitario, carrera, plan vigente, ciclo actual y estado académico.", "type": "fact", "importance": 0.86, "tags": ["estudiantes", "datos"]},
+        {"content": "El plan vigente del estudiante debe relacionarse con su carrera.", "type": "constraint", "importance": 0.86, "tags": ["estudiantes", "plan estudios", "carrera"]},
+        {"content": "El color sugerido para pantallas de estudiantes es azul claro.", "type": "preference", "importance": 0.2, "tags": ["ui", "color", "distractor"]},
+        {"content": "El botón primario tentativo en estudiantes puede decir Guardar estudiante.", "type": "preference", "importance": 0.18, "tags": ["ui", "boton", "distractor"]}
+      ]
+    },
+    {
+      "turn": 5,
+      "user_prompt": "Ahora agregaremos el módulo Plan de estudios por carrera. Cada carrera tiene ciclos, cada ciclo tiene cursos obligatorios y electivos, y cada curso puede tener prerrequisitos. Todo cambio al plan debe quedar auditado.",
+      "memory_hints": [
+        {"content": "El módulo Plan de estudios por carrera forma parte del Sistema de Gestión Académica Universitaria.", "type": "fact", "importance": 0.9, "tags": ["plan estudios", "carrera"]},
+        {"content": "Cada carrera tiene ciclos académicos dentro de su plan de estudios.", "type": "fact", "importance": 0.8, "tags": ["plan estudios", "ciclos"]},
+        {"content": "Cada ciclo contiene cursos obligatorios y cursos electivos.", "type": "fact", "importance": 0.82, "tags": ["plan estudios", "cursos"]},
+        {"content": "Los cursos del plan de estudios pueden tener prerrequisitos.", "type": "constraint", "importance": 0.92, "tags": ["plan estudios", "prerrequisitos"]},
+        {"content": "Todo cambio al plan de estudios debe quedar auditado.", "type": "constraint", "importance": 0.95, "tags": ["plan estudios", "auditoria"]}
+      ]
+    },
+    {
+      "turn": 6,
+      "user_prompt": "Para plan de estudios, se necesitan reportes por carrera, reportes por ciclo, una vista de malla curricular, filtros por tipo de curso y exportación a Excel. La vista de malla podría tener tarjetas verdes para cursos aprobados.",
+      "memory_hints": [
+        {"content": "El plan de estudios requiere reportes por carrera y por ciclo.", "type": "fact", "importance": 0.45, "tags": ["reportes", "plan estudios"]},
+        {"content": "El plan de estudios tendrá una vista de malla curricular.", "type": "fact", "importance": 0.65, "tags": ["plan estudios", "malla curricular"]},
+        {"content": "Los cursos podrán filtrarse por tipo de curso obligatorio o electivo.", "type": "fact", "importance": 0.42, "tags": ["filtros", "plan estudios"]},
+        {"content": "La exportación a Excel del plan de estudios es deseable pero no crítica.", "type": "preference", "importance": 0.25, "tags": ["excel", "distractor"]},
+        {"content": "La vista de malla curricular podría usar tarjetas verdes para cursos aprobados.", "type": "preference", "importance": 0.18, "tags": ["ui", "color", "distractor"]}
+      ]
+    },
+    {
+      "turn": 7,
+      "user_prompt": "Cambio importante: la validación de prerrequisitos cambia. Ya no se validará recién al registrar notas; ahora debe validarse antes de permitir la matrícula académica del estudiante.",
+      "memory_hints": [
+        {"content": "La validación de prerrequisitos cambia: debe ejecutarse antes de permitir la matrícula académica.", "type": "decision", "importance": 0.96, "tags": ["prerrequisitos", "matricula", "cambio"]},
+        {"content": "La regla anterior de validar prerrequisitos recién al registrar notas ya no aplica.", "type": "decision", "importance": 0.88, "tags": ["prerrequisitos", "obsoleto", "notas"]},
+        {"content": "La matrícula académica debe consultar el plan de estudios vigente del estudiante.", "type": "constraint", "importance": 0.92, "tags": ["matricula", "plan estudios", "estudiantes"]}
+      ]
+    },
+    {
+      "turn": 8,
+      "user_prompt": "Otro cambio: el módulo de docentes ya no gestionará carga horaria. Esa responsabilidad se reemplaza por un futuro módulo de planificación académica. Docentes solo mantendrá datos del docente y su estado.",
+      "memory_hints": [
+        {"content": "La carga horaria ya no pertenece al módulo de docentes.", "type": "decision", "importance": 0.9, "tags": ["docentes", "carga horaria", "obsoleto"]},
+        {"content": "La carga horaria se reemplaza por un futuro módulo de planificación académica.", "type": "decision", "importance": 0.86, "tags": ["planificacion", "carga horaria", "cambio"]},
+        {"content": "El módulo de docentes debe limitarse a datos del docente y estado activo o inactivo.", "type": "constraint", "importance": 0.86, "tags": ["docentes", "alcance"]}
+      ]
+    },
+    {
+      "turn": 9,
+      "user_prompt": "Ahora definamos matrícula académica. La matrícula será por periodo académico, debe validar prerrequisitos, plan vigente, cupos por curso y estado académico del estudiante. Los horarios se mostrarán como apoyo visual.",
+      "memory_hints": [
+        {"content": "La matrícula académica se realiza por periodo académico.", "type": "fact", "importance": 0.86, "tags": ["matricula", "periodo"]},
+        {"content": "La matrícula académica debe validar prerrequisitos antes de registrar cursos.", "type": "constraint", "importance": 0.96, "tags": ["matricula", "prerrequisitos"]},
+        {"content": "La matrícula académica debe validar el plan vigente del estudiante.", "type": "constraint", "importance": 0.92, "tags": ["matricula", "plan estudios"]},
+        {"content": "La matrícula académica debe validar cupos disponibles por curso.", "type": "constraint", "importance": 0.9, "tags": ["matricula", "cupos"]},
+        {"content": "Los horarios se mostrarán como apoyo visual durante la matrícula.", "type": "fact", "importance": 0.45, "tags": ["horarios", "matricula"]}
+      ]
+    },
+    {
+      "turn": 10,
+      "user_prompt": "Para matrícula también necesitamos filtros por carrera, ciclo, turno y docente. El coordinador quiere exportar constancias en PDF, ver gráficos de cupos y usar etiquetas de colores para cursos sin cupo.",
+      "memory_hints": [
+        {"content": "La matrícula puede filtrar cursos por carrera, ciclo, turno y docente.", "type": "fact", "importance": 0.42, "tags": ["matricula", "filtros"]},
+        {"content": "La constancia de matrícula en PDF es una salida deseable.", "type": "preference", "importance": 0.35, "tags": ["matricula", "pdf"]},
+        {"content": "Los gráficos de cupos son un reporte visual secundario.", "type": "preference", "importance": 0.22, "tags": ["reportes", "cupos", "distractor"]},
+        {"content": "Las etiquetas de colores para cursos sin cupo son una preferencia visual no crítica.", "type": "preference", "importance": 0.18, "tags": ["ui", "color", "distractor"]}
+      ]
+    },
+    {
+      "turn": 11,
+      "user_prompt": "Nueva restricción de seguridad: el registro de notas ya no será editable después del cierre académico, excepto por rectificación aprobada por el coordinador. Esa rectificación debe quedar auditada.",
+      "memory_hints": [
+        {"content": "El registro de notas ya no será editable después del cierre académico.", "type": "constraint", "importance": 0.96, "tags": ["notas", "cierre academico"]},
+        {"content": "Solo una rectificación aprobada por el coordinador permite cambiar notas después del cierre académico.", "type": "constraint", "importance": 0.94, "tags": ["notas", "rectificacion", "coordinador"]},
+        {"content": "Toda rectificación de notas debe quedar auditada.", "type": "constraint", "importance": 0.95, "tags": ["notas", "auditoria", "rectificacion"]}
+      ]
+    },
+    {
+      "turn": 12,
+      "user_prompt": "Agreguemos planificación académica de forma ligera: por ahora solo recibirá la carga horaria futura, relacionará docentes con cursos y servirá como insumo para horarios. No la desarrollaremos completa en esta versión.",
+      "memory_hints": [
+        {"content": "Planificación académica recibirá la carga horaria que ya no pertenece a docentes.", "type": "decision", "importance": 0.78, "tags": ["planificacion", "carga horaria"]},
+        {"content": "Planificación académica relacionará docentes con cursos.", "type": "fact", "importance": 0.68, "tags": ["planificacion", "docentes", "cursos"]},
+        {"content": "Planificación académica servirá como insumo para horarios.", "type": "fact", "importance": 0.62, "tags": ["planificacion", "horarios"]},
+        {"content": "Planificación académica no se desarrollará completa en esta versión.", "type": "constraint", "importance": 0.74, "tags": ["planificacion", "alcance"]}
+      ]
+    },
+    {
+      "turn": 13,
+      "user_prompt": "Necesito que no se pierda esta decisión: matrícula, notas, plan de estudios y docentes deben compartir auditoría común. Los reportes visuales, colores y exportaciones no deben condicionar la arquitectura central.",
+      "memory_hints": [
+        {"content": "Matrícula, notas, plan de estudios y docentes deben compartir auditoría común.", "type": "decision", "importance": 0.97, "tags": ["auditoria", "modulos", "academico"]},
+        {"content": "Los reportes visuales no deben condicionar la arquitectura central.", "type": "constraint", "importance": 0.72, "tags": ["arquitectura", "reportes"]},
+        {"content": "Los colores de interfaz no deben condicionar la arquitectura central.", "type": "constraint", "importance": 0.7, "tags": ["arquitectura", "ui", "distractor"]},
+        {"content": "Las exportaciones a Excel o PDF no deben dominar el diseño de los módulos académicos principales.", "type": "constraint", "importance": 0.68, "tags": ["arquitectura", "exportaciones"]}
+      ]
+    },
+    {
+      "turn": 14,
+      "user_prompt": "Interrupción: dejemos un momento el sistema académico. Ahora necesito diseñar un sistema de inventario de laptops para el área de TI, con código patrimonial, estado del equipo, responsable, proveedor, garantía, mantenimiento y ubicación física.",
+      "memory_hints": [
+        {"content": "La tarea ajena trata sobre inventario de laptops para el área de TI.", "type": "fact", "importance": 0.35, "tags": ["disruptor", "inventario", "laptops"]},
+        {"content": "El inventario de laptops registra código patrimonial.", "type": "fact", "importance": 0.32, "tags": ["disruptor", "inventario"]},
+        {"content": "El inventario de laptops registra estado del equipo y responsable.", "type": "fact", "importance": 0.34, "tags": ["disruptor", "inventario"]},
+        {"content": "El inventario de laptops registra proveedor, garantía, mantenimiento y ubicación física.", "type": "fact", "importance": 0.32, "tags": ["disruptor", "inventario"]},
+        {"content": "El inventario de laptops no pertenece al Sistema de Gestión Académica Universitaria.", "type": "constraint", "importance": 0.55, "tags": ["disruptor", "no academico"]}
+      ]
+    },
+    {
+      "turn": 15,
+      "user_prompt": "Para esa tarea ajena, la interfaz de inventario usará etiquetas rojas para equipos dañados, amarillas para mantenimiento y verdes para disponibles. También tendrá exportación mensual y alerta de garantía por vencer.",
+      "memory_hints": [
+        {"content": "La tarea ajena de laptops usa etiquetas rojas, amarillas y verdes según estado del equipo.", "type": "preference", "importance": 0.22, "tags": ["disruptor", "ui", "color"]},
+        {"content": "La tarea ajena de laptops tendrá exportación mensual.", "type": "preference", "importance": 0.2, "tags": ["disruptor", "exportacion"]},
+        {"content": "La tarea ajena de laptops tendrá alerta de garantía por vencer.", "type": "fact", "importance": 0.28, "tags": ["disruptor", "garantia"]},
+        {"content": "Los colores de la tarea ajena no deben influir en el sistema académico.", "type": "constraint", "importance": 0.5, "tags": ["disruptor", "distractor"]}
+      ]
+    },
+    {
+      "turn": 16,
+      "user_prompt": "Terminamos la interrupción. Retomemos el Sistema de Gestión Académica Universitaria. Necesito integrar registro de notas, docentes, estudiantes, plan de estudios y matrícula. La tarea ajena de equipos no debe afectar esta arquitectura salvo por patrones genéricos reutilizables.",
+      "memory_hints": [
+        {"content": "Se retoma el Sistema de Gestión Académica Universitaria después de la interrupción.", "type": "decision", "importance": 0.9, "tags": ["academico", "retorno"]},
+        {"content": "La arquitectura final debe integrar registro de notas, docentes, estudiantes, plan de estudios y matrícula.", "type": "constraint", "importance": 0.96, "tags": ["arquitectura", "modulos", "academico"]},
+        {"content": "La tarea ajena de equipos no debe afectar la arquitectura académica salvo por patrones genéricos reutilizables.", "type": "constraint", "importance": 0.88, "tags": ["disruptor", "arquitectura", "aislamiento"]},
+        {"content": "La arquitectura académica debe priorizar reglas vigentes sobre decisiones iniciales reemplazadas.", "type": "constraint", "importance": 0.94, "tags": ["arquitectura", "cambios", "vigente"]}
+      ]
+    },
+    {
+      "turn": 17,
+      "user_prompt": "Antes del diseño final, confirma que el flujo principal debe ser: estudiante consulta plan vigente, selecciona cursos, matrícula valida prerrequisitos y cupos, luego docentes registran notas, y cualquier rectificación posterior al cierre requiere coordinador y auditoría.",
+      "memory_hints": [
+        {"content": "El flujo principal inicia cuando el estudiante consulta su plan vigente.", "type": "fact", "importance": 0.84, "tags": ["flujo", "estudiantes", "plan estudios"]},
+        {"content": "El estudiante selecciona cursos y matrícula valida prerrequisitos y cupos.", "type": "constraint", "importance": 0.96, "tags": ["flujo", "matricula", "prerrequisitos", "cupos"]},
+        {"content": "Después de la matrícula, los docentes registran notas.", "type": "fact", "importance": 0.82, "tags": ["flujo", "docentes", "notas"]},
+        {"content": "Cualquier rectificación posterior al cierre académico requiere coordinador y auditoría.", "type": "constraint", "importance": 0.97, "tags": ["flujo", "rectificacion", "auditoria"]}
+      ]
+    },
+    {
+      "turn": 18,
+      "user_prompt": "Diseña la arquitectura final vigente del Sistema de Gestión Académica Universitaria. Incluye módulos de registro de notas, docentes, estudiantes, plan de estudios y matrícula; autenticación con correo institucional; auditoría académica; validación de prerrequisitos, plan vigente y cupos; cierre académico; rectificación por coordinador; decisiones reemplazadas que ya no deben usarse; y explica qué información secundaria o ajena debe quedar fuera del diseño.",
+      "memory_hints": []
+    }
+  ],
+  "final_questions": [
+    {"id": "q1", "question": "¿Cuál es el proyecto principal que debe retomarse al final?", "expected_answer": "Sistema de Gestión Académica Universitaria para la FIIS."},
+    {"id": "q2", "question": "¿Qué módulos académicos deben integrarse en la arquitectura final?", "expected_answer": "Registro de notas, docentes, estudiantes, plan de estudios y matrícula académica."},
+    {"id": "q3", "question": "¿Cuándo debe validarse la regla vigente de prerrequisitos?", "expected_answer": "Antes de permitir o registrar la matrícula académica."},
+    {"id": "q4", "question": "¿Qué decisión sobre carga horaria fue reemplazada?", "expected_answer": "La carga horaria ya no pertenece a docentes; pasa a planificación académica futura."},
+    {"id": "q5", "question": "¿Qué debe ocurrir con las notas después del cierre académico?", "expected_answer": "No son editables, salvo rectificación aprobada por coordinador y auditada."},
+    {"id": "q6", "question": "¿Qué información disruptiva debe quedar fuera del diseño académico?", "expected_answer": "La información del inventario de laptops, códigos patrimoniales, estados de equipos, garantías, proveedores y colores de equipos."}
+  ],
+  "ground_truth": {
+    "critical_facts": [
+      "Sistema de Gestión Académica Universitaria para la FIIS",
+      "módulos finales: registro de notas, docentes, estudiantes, plan de estudios y matrícula académica",
+      "autenticación con correo institucional",
+      "auditoría común para matrícula, notas, plan de estudios y docentes",
+      "prerrequisitos se validan antes de matrícula",
+      "matrícula valida plan vigente y cupos por curso",
+      "notas no editables después del cierre académico salvo rectificación aprobada por coordinador",
+      "rectificaciones de notas deben auditarse",
+      "carga horaria ya no pertenece a docentes y pasa a planificación académica futura",
+      "inventario de laptops es una tarea ajena y no debe afectar la arquitectura académica"
+    ],
+    "expected_constraints": [
+      "correo institucional",
+      "auditoría común académica",
+      "validación de prerrequisitos antes de matrícula",
+      "validación de plan vigente",
+      "validación de cupos",
+      "bloqueo de notas tras cierre académico",
+      "rectificación solo con coordinador y auditoría",
+      "excluir tarea ajena de equipos del diseño académico"
+    ],
+    "expected_contradictions": [
+      "validar prerrequisitos recién al registrar notas",
+      "gestionar carga horaria dentro de docentes",
+      "permitir edición libre de notas después del cierre académico",
+      "usar colores o reglas del inventario de laptops para definir la arquitectura académica",
+      "tratar el inventario de laptops como módulo académico"
+    ]
+  }
+}

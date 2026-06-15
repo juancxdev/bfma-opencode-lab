@@ -25,6 +25,31 @@ Para ejecutar el piloto real con el modelo recomendado:
 go run ./cmd/bfma-pilot --scenario scenario_01 --groups g1,g2,g3 --reps 1 --model opencode-go/deepseek-v4-flash
 ```
 
+Para el escenario longitudinal de estrés:
+
+```bash
+go run ./cmd/bfma-pilot \
+  --scenario scenario_03_gestion_academica_longitudinal \
+  --groups g1,g2,g3 \
+  --reps 1 \
+  --model opencode-go/deepseek-v4-flash \
+  --retries 2 \
+  --timeout 10m
+```
+
+Si OpenCode o el proveedor cortan una corrida, podés retomar un grupo desde un turno reconstruyendo la memoria previa sin llamar al LLM:
+
+```bash
+go run ./cmd/bfma-pilot \
+  --scenario scenario_03_gestion_academica_longitudinal \
+  --groups g3 \
+  --from-turn 11 \
+  --reps 1 \
+  --model opencode-go/deepseek-v4-flash \
+  --retries 2 \
+  --timeout 10m
+```
+
 ## Principio metodológico
 
 Los agentes no devuelven métricas ni logs de memoria. El runner controla el contexto, observa OpenCode y registra eventos experimentales en JSONL.

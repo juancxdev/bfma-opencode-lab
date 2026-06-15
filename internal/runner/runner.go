@@ -15,16 +15,19 @@ import (
 )
 
 type Config struct {
-	ProjectDir  string
-	ScenarioDir string
-	LogDir      string
-	DataDir     string
-	ScenarioID  string
-	Groups      []memory.Group
-	Reps        int
-	Model       string
-	DryRun      bool
-	Timeout     time.Duration
+	ProjectDir   string
+	ScenarioDir  string
+	LogDir       string
+	DataDir      string
+	ScenarioID   string
+	Groups       []memory.Group
+	Reps         int
+	Model        string
+	DryRun       bool
+	Timeout      time.Duration
+	Retries      int
+	RetryBackoff time.Duration
+	FromTurn     int
 }
 
 type Result struct {
@@ -43,6 +46,18 @@ func New(cfg Config, client opencode.Client) *Runner {
 	}
 	if cfg.Timeout <= 0 {
 		cfg.Timeout = 5 * time.Minute
+	}
+	if cfg.Retries < 0 {
+		cfg.Retries = 0
+	}
+	if cfg.RetryBackoff < 0 {
+		cfg.RetryBackoff = 0
+	}
+	if cfg.RetryBackoff == 0 {
+		cfg.RetryBackoff = 2 * time.Second
+	}
+	if cfg.FromTurn < 0 {
+		cfg.FromTurn = 0
 	}
 	if cfg.LogDir == "" {
 		cfg.LogDir = filepath.Join(cfg.ProjectDir, "logs")
@@ -63,10 +78,12 @@ func (r *Runner) Run(ctx context.Context) (Result, error) {
 	for _, group := range r.cfg.Groups {
 		for rep := 1; rep <= r.cfg.Reps; rep++ {
 			logPath, err := r.runGroupRep(ctx, runID, sc, group, rep)
+			if logPath != "" {
+				result.LogFiles = append(result.LogFiles, logPath)
+			}
 			if err != nil {
 				return result, err
 			}
-			result.LogFiles = append(result.LogFiles, logPath)
 		}
 	}
 	return result, nil
@@ -84,7 +101,14 @@ func (r *Runner) runGroupRep(ctx context.Context, runID string, sc scenario.Scen
 	}
 	defer writer.Close()
 
+	if err := r.warmMemoryUntilTurn(sc, manager); err != nil {
+		return logPath, err
+	}
+
 	for _, turn := range sc.Turns {
+		if r.cfg.FromTurn > 0 && turn.Turn < r.cfg.FromTurn {
+			continue
+		}
 		memoryBefore := manager.Snapshot()
 		memCtx, err := manager.BuildContext(turn)
 		if err != nil {
@@ -92,6 +116,58 @@ func (r *Runner) runGroupRep(ctx context.Context, runID string, sc scenario.Scen
 		}
 		prompt := BuildPrompt(string(group), memCtx.Text, turn.UserPrompt)
 
+		if err := r.runTurnWithRetries(ctx, writer, runID, sc, group, rep, agent, turn, manager, memoryBefore, memCtx, prompt); err != nil {
+			return logPath, err
+		}
+	}
+	return logPath, nil
+}
+
+func (r *Runner) warmMemoryUntilTurn(sc scenario.Scenario, manager memory.Manager) error {
+	if r.cfg.FromTurn <= 0 {
+		return nil
+	}
+	found := false
+	for _, turn := range sc.Turns {
+		if turn.Turn == r.cfg.FromTurn {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return fmt.Errorf("from-turn %d not found in scenario %s", r.cfg.FromTurn, sc.ID)
+	}
+	for _, turn := range sc.Turns {
+		if turn.Turn >= r.cfg.FromTurn {
+			break
+		}
+		if _, err := manager.BuildContext(turn); err != nil {
+			return fmt.Errorf("warm memory build context turn=%d: %w", turn.Turn, err)
+		}
+		if _, err := manager.Observe(turn, memory.AgentResponse{}); err != nil {
+			return fmt.Errorf("warm memory observe turn=%d: %w", turn.Turn, err)
+		}
+	}
+	return nil
+}
+
+func (r *Runner) runTurnWithRetries(
+	ctx context.Context,
+	writer *logging.JSONL,
+	runID string,
+	sc scenario.Scenario,
+	group memory.Group,
+	rep int,
+	agent string,
+	turn scenario.Turn,
+	manager memory.Manager,
+	memoryBefore memory.Snapshot,
+	memCtx memory.Context,
+	prompt string,
+) error {
+	maxAttempts := r.cfg.Retries + 1
+	var lastErr error
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
 		turnCtx, cancel := context.WithTimeout(ctx, r.cfg.Timeout)
 		resp, err := r.client.Run(turnCtx, opencode.Request{
 			ProjectDir: r.cfg.ProjectDir,
@@ -102,42 +178,101 @@ func (r *Runner) runGroupRep(ctx context.Context, runID string, sc scenario.Scen
 		})
 		cancel()
 		if err != nil {
-			return logPath, fmt.Errorf("run opencode group=%s turn=%d: %w", group, turn.Turn, err)
+			lastErr = err
+			entry := r.turnLog(runID, sc, group, rep, turn, agent, memoryBefore, memoryBefore, memCtx, nil, opencode.Response{}, attempt, maxAttempts)
+			entry.Status = "failed"
+			entry.Error = diagnoseRunError(err, r.cfg.Timeout, agent, turn.Turn)
+			if err := writer.Write(entry); err != nil {
+				return err
+			}
+			if attempt < maxAttempts {
+				if err := sleepWithContext(ctx, r.cfg.RetryBackoff); err != nil {
+					return err
+				}
+				continue
+			}
+			break
 		}
 
 		postEvents, err := manager.Observe(turn, memory.AgentResponse{Text: resp.Text})
 		if err != nil {
-			return logPath, fmt.Errorf("observe memory group=%s turn=%d: %w", group, turn.Turn, err)
+			return fmt.Errorf("observe memory group=%s turn=%d: %w", group, turn.Turn, err)
 		}
 		memoryAfter := manager.Snapshot()
-		combinedEvents := append([]memory.Event{}, memCtx.Events...)
-		combinedEvents = append(combinedEvents, postEvents...)
-		entry := instrumentation.TurnLog{
-			RunID:                 runID,
-			Group:                 string(group),
-			ScenarioID:            sc.ID,
-			Rep:                   rep,
-			Turn:                  turn.Turn,
-			Agent:                 agent,
-			MemoryContextInjected: memCtx.Text,
-			UserPrompt:            turn.UserPrompt,
-			AssistantResponse:     resp.Text,
-			LatencyMS:             resp.Latency.Milliseconds(),
-			OpenCodeEvents:        resp.Events,
-			MemoryBefore:          memoryBefore,
-			MemoryAfter:           memoryAfter,
-			MemoryEvents:          combinedEvents,
-			MemoryPreEvents:       memCtx.Events,
-			MemoryPostEvents:      postEvents,
-		}
-		if turn.Turn == sc.Turns[len(sc.Turns)-1].Turn {
-			entry.FinalQuestions = sc.FinalQuestions
-		}
+		entry := r.turnLog(runID, sc, group, rep, turn, agent, memoryBefore, memoryAfter, memCtx, postEvents, resp, attempt, maxAttempts)
+		entry.Status = "success"
 		if err := writer.Write(entry); err != nil {
-			return logPath, err
+			return err
 		}
+		return nil
 	}
-	return logPath, nil
+	return fmt.Errorf("run opencode group=%s turn=%d after %d attempt(s): %w", group, turn.Turn, maxAttempts, lastErr)
+}
+
+func (r *Runner) turnLog(
+	runID string,
+	sc scenario.Scenario,
+	group memory.Group,
+	rep int,
+	turn scenario.Turn,
+	agent string,
+	memoryBefore memory.Snapshot,
+	memoryAfter memory.Snapshot,
+	memCtx memory.Context,
+	postEvents []memory.Event,
+	resp opencode.Response,
+	attempt int,
+	maxAttempts int,
+) instrumentation.TurnLog {
+	combinedEvents := append([]memory.Event{}, memCtx.Events...)
+	combinedEvents = append(combinedEvents, postEvents...)
+	entry := instrumentation.TurnLog{
+		RunID:                 runID,
+		Group:                 string(group),
+		ScenarioID:            sc.ID,
+		Rep:                   rep,
+		Turn:                  turn.Turn,
+		Attempt:               attempt,
+		MaxAttempts:           maxAttempts,
+		Agent:                 agent,
+		MemoryContextInjected: memCtx.Text,
+		UserPrompt:            turn.UserPrompt,
+		AssistantResponse:     resp.Text,
+		TimeoutMS:             r.cfg.Timeout.Milliseconds(),
+		LatencyMS:             resp.Latency.Milliseconds(),
+		OpenCodeEvents:        resp.Events,
+		MemoryBefore:          memoryBefore,
+		MemoryAfter:           memoryAfter,
+		MemoryEvents:          combinedEvents,
+		MemoryPreEvents:       memCtx.Events,
+		MemoryPostEvents:      postEvents,
+	}
+	if turn.Turn == sc.Turns[len(sc.Turns)-1].Turn {
+		entry.FinalQuestions = sc.FinalQuestions
+	}
+	return entry
+}
+
+func diagnoseRunError(err error, timeout time.Duration, agent string, turn int) string {
+	msg := err.Error()
+	if strings.Contains(msg, "context deadline exceeded") || strings.Contains(msg, "signal: killed") || strings.Contains(msg, "stderr empty") {
+		return fmt.Sprintf("opencode run failed; likely timeout or provider hang; timeout=%s; agent=%s; turn=%d; cause=%s", timeout, agent, turn, msg)
+	}
+	return fmt.Sprintf("opencode run failed; timeout=%s; agent=%s; turn=%d; cause=%s", timeout, agent, turn, msg)
+}
+
+func sleepWithContext(ctx context.Context, d time.Duration) error {
+	if d <= 0 {
+		return nil
+	}
+	timer := time.NewTimer(d)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-timer.C:
+		return nil
+	}
 }
 
 func (r *Runner) newManager(runID string, group memory.Group) (memory.Manager, string, error) {

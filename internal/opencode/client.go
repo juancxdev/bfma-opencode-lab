@@ -64,7 +64,14 @@ func (c *CLIClient) Run(ctx context.Context, req Request) (Response, error) {
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		return Response{}, fmt.Errorf("opencode run failed: %w stderr=%s", err, stderr.String())
+		stderrText := strings.TrimSpace(stderr.String())
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return Response{}, fmt.Errorf("opencode run failed: %w; context=%v; likely timeout or provider hang; agent=%s stderr=%s", err, ctxErr, req.Agent, stderrText)
+		}
+		if stderrText == "" {
+			return Response{}, fmt.Errorf("opencode run failed: %w; stderr empty; process may have been killed by OS or provider runtime; agent=%s", err, req.Agent)
+		}
+		return Response{}, fmt.Errorf("opencode run failed: %w stderr=%s", err, stderrText)
 	}
 
 	events, text := ParseJSONEvents(stdout.String())
