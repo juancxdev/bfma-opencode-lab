@@ -8,252 +8,376 @@ const htmlTemplate = `<!doctype html>
   <title>{{.Title}}</title>
   <style>
     :root {
-      --bg: #f6f8fb;
-      --panel: #ffffff;
-      --text: #172033;
-      --muted: #667085;
-      --border: #d9e2ec;
-      --primary: #2454d6;
-      --primary-soft: #e8efff;
-      --keep: #0f766e;
-      --discard: #dc6803;
-      --danger: #c2410c;
-      --purple: #7c3aed;
-      --shadow: 0 12px 30px rgba(15, 23, 42, .08);
+      --notion-bg: #f7f6f3;
+      --notion-page: #ffffff;
+      --notion-text: #37352f;
+      --notion-muted: #787774;
+      --notion-border: #e9e7e3;
+      --notion-hover: #f1f1ef;
+      --notion-blue: #2f80ed;
+      --notion-green: #448361;
+      --notion-orange: #d9730d;
+      --notion-red: #d44c47;
+      --notion-purple: #6940a5;
+      --notion-code: #f7f6f3;
+      --notion-shadow: 0 1px 2px rgba(15, 15, 15, .06);
     }
     * { box-sizing: border-box; }
-    body {
+    html { scroll-behavior: smooth; }
+    body.notion-page {
       margin: 0;
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: radial-gradient(circle at top left, #eef4ff 0, #f6f8fb 34rem);
-      color: var(--text);
+      background: var(--notion-bg);
+      color: var(--notion-text);
+      font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      line-height: 1.55;
     }
-    header {
-      padding: 34px 36px 22px;
-      border-bottom: 1px solid var(--border);
-      background: rgba(255,255,255,.78);
-      backdrop-filter: blur(10px);
+    a { color: inherit; text-decoration: none; }
+    .notion-shell {
+      display: grid;
+      grid-template-columns: 248px minmax(0, 1fr);
+      gap: 0;
+      max-width: 1520px;
+      margin: 0 auto;
+    }
+    .notion-toc {
       position: sticky;
       top: 0;
-      z-index: 10;
+      height: 100vh;
+      padding: 24px 16px;
+      border-right: 1px solid var(--notion-border);
+      background: rgba(247, 246, 243, .92);
+      overflow: auto;
     }
-    h1 { margin: 0 0 8px; font-size: 30px; letter-spacing: -.03em; }
-    h2 { margin: 0 0 16px; font-size: 20px; letter-spacing: -.02em; }
-    h3 { margin: 18px 0 10px; font-size: 16px; }
-    .subtitle { color: var(--muted); margin: 0; }
-    .toolbar { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
-    button {
-      border: 1px solid var(--border);
-      background: var(--panel);
-      color: var(--text);
-      border-radius: 10px;
-      padding: 10px 14px;
-      cursor: pointer;
+    .toc-title {
+      font-size: 12px;
+      color: var(--notion-muted);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      margin: 0 0 12px;
+      font-weight: 700;
+    }
+    .toc-link {
+      display: block;
+      padding: 7px 9px;
+      border-radius: 6px;
+      color: var(--notion-muted);
+      font-size: 14px;
+    }
+    .toc-link:hover { background: var(--notion-hover); color: var(--notion-text); }
+    .notion-document {
+      min-width: 0;
+      background: var(--notion-page);
+      padding: 42px clamp(18px, 5vw, 72px) 72px;
+    }
+    .doc-header {
+      max-width: 1120px;
+      margin: 0 auto 28px;
+    }
+    .doc-icon { font-size: 58px; line-height: 1; margin-bottom: 14px; }
+    h1, h2, h3, h4 { color: var(--notion-text); letter-spacing: -.02em; }
+    h1 { font-size: clamp(34px, 6vw, 54px); line-height: 1.05; margin: 0 0 12px; font-weight: 750; }
+    h2 { font-size: 25px; line-height: 1.2; margin: 0 0 14px; font-weight: 720; }
+    h3 { font-size: 17px; margin: 0 0 10px; font-weight: 680; }
+    h4 { font-size: 14px; margin: 18px 0 8px; font-weight: 680; }
+    .subtitle { color: var(--notion-muted); margin: 0 0 14px; font-size: 15px; }
+    .notion-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 14px 0 18px;
+    }
+    .notion-badge, .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      padding: 4px 9px;
+      background: var(--notion-hover);
+      color: var(--notion-muted);
+      border: 1px solid transparent;
+      font-size: 12px;
       font-weight: 650;
-      box-shadow: 0 2px 8px rgba(15, 23, 42, .04);
+      white-space: nowrap;
     }
-    button.primary { background: var(--primary); border-color: var(--primary); color: white; }
-    main { padding: 28px 36px 48px; max-width: 1440px; margin: 0 auto; }
-    section {
-      background: rgba(255,255,255,.92);
-      border: 1px solid var(--border);
-      border-radius: 18px;
-      box-shadow: var(--shadow);
-      padding: 22px;
-      margin-bottom: 22px;
+    .badge-blue { color: #1d4f8f; background: #eaf3ff; }
+    .badge-green { color: #2f6f4e; background: #edf7f1; }
+    .badge-orange { color: #9a4f05; background: #fbf0e3; }
+    .badge-red, .failed { color: #9f2f2c; background: #fdebec; border-color: #f4c7c3; }
+    .success { color: #2f6f4e; background: #edf7f1; border-color: #cfe7d8; }
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+      overflow-x: auto;
+      padding-bottom: 2px;
     }
-    .grid { display: grid; gap: 16px; }
+    button {
+      border: 1px solid var(--notion-border);
+      background: #fff;
+      color: var(--notion-text);
+      border-radius: 6px;
+      padding: 7px 10px;
+      cursor: pointer;
+      font-weight: 620;
+      font-size: 13px;
+      min-height: 34px;
+    }
+    button:hover { background: var(--notion-hover); }
+    button.primary { background: var(--notion-text); color: white; border-color: var(--notion-text); }
+    .notion-block {
+      max-width: 1120px;
+      margin: 0 auto 18px;
+      padding: 20px 0;
+      border-top: 1px solid var(--notion-border);
+      scroll-margin-top: 20px;
+    }
+    .notion-block:first-of-type { border-top: 0; }
+    .notion-callout {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      padding: 14px 16px;
+      margin: 16px 0;
+      border-radius: 8px;
+      background: var(--notion-bg);
+      border: 1px solid var(--notion-border);
+    }
+    .notion-callout .emoji { font-size: 22px; line-height: 1.2; }
+    .notion-callout p { margin: 0; }
+    .grid { display: grid; gap: 12px; }
     .cards { grid-template-columns: repeat(4, minmax(0, 1fr)); }
     .group-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .charts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .three-col { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
-    .card {
-      background: linear-gradient(180deg, #fff, #f9fbff);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 16px;
-      min-height: 112px;
-    }
-    .card .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; font-weight: 800; }
-    .card .value { font-size: 30px; font-weight: 850; margin-top: 8px; letter-spacing: -.03em; }
-    .card .hint { color: var(--muted); font-size: 13px; margin-top: 6px; }
-    .chart-card {
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 16px;
+    .three-col { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .card, .group-card, .chart-card, .final-column {
       background: #fff;
-    }
-    .group-card {
-      border: 1px solid var(--border);
-      border-radius: 18px;
-      background: #fff;
-      padding: 18px;
-      box-shadow: 0 8px 22px rgba(15, 23, 42, .06);
-    }
-    .group-card h3 { margin-top: 0; }
-    .metric-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 14px 0; }
-    .metric { background: #f8fbff; border: 1px solid var(--border); border-radius: 12px; padding: 10px; }
-    .metric b { display:block; font-size: 18px; margin-top: 4px; }
-    .coverage-bar { height: 10px; background: #e5e7eb; border-radius: 999px; overflow:hidden; margin: 10px 0; }
-    .coverage-bar span { display:block; height:100%; background: linear-gradient(90deg, var(--primary), var(--keep)); }
-    .final-column {
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 14px;
-      background: #fff;
+      border: 1px solid var(--notion-border);
+      border-radius: 8px;
+      box-shadow: var(--notion-shadow);
       min-width: 0;
     }
-    .final-column pre { max-height: 360px; }
-    .coverage-list { padding-left: 18px; }
-    .coverage-list li { margin-bottom: 6px; }
-    .detected { color: var(--keep); font-weight: 800; }
-    .missed { color: var(--danger); font-weight: 800; }
-    canvas { width: 100%; height: 280px; display: block; }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 13px;
-      overflow: hidden;
-      border-radius: 12px;
+    .card { padding: 14px; }
+    .card .label {
+      color: var(--notion-muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      font-weight: 720;
     }
-    th, td { border-bottom: 1px solid var(--border); padding: 10px; text-align: left; vertical-align: top; }
-    th { background: #f1f5fb; color: #334155; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
-    tr:hover td { background: #f8fbff; }
-    .pill {
-      display: inline-flex;
-      align-items: center;
-      border-radius: 999px;
-      padding: 4px 9px;
-      font-weight: 750;
-      font-size: 12px;
-      border: 1px solid transparent;
-    }
-    .success { color: #047857; background: #ecfdf3; border-color: #abefc6; }
-    .failed { color: var(--danger); background: #fff4ed; border-color: #fed7aa; }
+    .card .value { font-size: 25px; font-weight: 740; margin-top: 5px; letter-spacing: -.03em; }
+    .card .hint { color: var(--notion-muted); font-size: 12px; margin-top: 4px; }
+    .group-card { padding: 16px; }
+    .group-card h3 { display: flex; align-items: center; gap: 8px; }
+    .metric-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0; }
+    .metric { background: var(--notion-bg); border: 1px solid var(--notion-border); border-radius: 7px; padding: 9px; font-size: 12px; color: var(--notion-muted); }
+    .metric b { display:block; color: var(--notion-text); font-size: 17px; margin-top: 2px; }
+    .metric small { display:block; margin-top:2px; }
+    .coverage-bar { height: 8px; background: #ebebea; border-radius: 999px; overflow:hidden; margin: 10px 0; }
+    .coverage-bar span { display:block; height:100%; background: linear-gradient(90deg, var(--notion-blue), var(--notion-green)); }
+    .chart-card { padding: 14px; overflow: hidden; }
+    .chart-card h3 { margin-bottom: 8px; }
+    canvas { width: 100%; max-width: 100%; height: 260px; display: block; }
+    .table-wrap { overflow-x: auto; border: 1px solid var(--notion-border); border-radius: 8px; }
+    table { width: 100%; min-width: 760px; border-collapse: collapse; font-size: 13px; }
+    th, td { border-bottom: 1px solid var(--notion-border); padding: 9px 10px; text-align: left; vertical-align: top; }
+    th { background: var(--notion-bg); color: var(--notion-muted); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
+    tr:hover td { background: #fbfbfa; }
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
-    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
     pre {
       white-space: pre-wrap;
       word-break: break-word;
-      background: #0f172a;
-      color: #dbeafe;
-      border-radius: 14px;
-      padding: 16px;
-      max-height: 520px;
+      background: var(--notion-code);
+      color: var(--notion-text);
+      border: 1px solid var(--notion-border);
+      border-radius: 8px;
+      padding: 13px;
+      max-height: 420px;
       overflow: auto;
       font-size: 12px;
       line-height: 1.55;
     }
-    .findings li { margin-bottom: 8px; }
-    .muted { color: var(--muted); }
+    details.notion-details {
+      border: 1px solid var(--notion-border);
+      border-radius: 8px;
+      background: #fff;
+      margin: 10px 0;
+      overflow: hidden;
+    }
+    details.notion-details > summary {
+      cursor: pointer;
+      padding: 12px 14px;
+      font-weight: 680;
+      background: #fff;
+    }
+    details.notion-details[open] > summary { border-bottom: 1px solid var(--notion-border); background: var(--notion-bg); }
+    .details-body { padding: 14px; }
+    .final-column { padding: 0; }
+    .final-column > summary { list-style-position: inside; }
+    .final-column .details-body { padding-top: 10px; }
+    .coverage-list { padding-left: 18px; }
+    .coverage-list li, .findings li { margin-bottom: 6px; }
+    .detected { color: var(--notion-green); font-weight: 800; }
+    .missed { color: var(--notion-red); font-weight: 800; }
+    .muted { color: var(--notion-muted); }
     .hidden-long .long-content { display: none; }
-    .capture header { position: static; }
-    .capture section { box-shadow: none; break-inside: avoid; }
-    .capture main { max-width: 1280px; }
-    @media (max-width: 1000px) {
-      .cards, .group-cards, .charts, .two-col, .three-col { grid-template-columns: 1fr; }
-      header, main { padding-left: 18px; padding-right: 18px; }
+    .capture .notion-toc, .capture .toolbar { display: none; }
+    .capture .notion-shell { display: block; max-width: 1280px; }
+    .capture .notion-document { padding: 24px; }
+    .capture .notion-block { break-inside: avoid; }
+    @media (max-width: 1200px) {
+      .notion-shell { display: block; }
+      .notion-toc { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--notion-border); display: flex; gap: 8px; overflow-x: auto; padding: 10px 14px; }
+      .toc-title { display: none; }
+      .toc-link { white-space: nowrap; }
+      .notion-document { padding-top: 28px; }
+    }
+    @media (max-width: 900px) {
+      .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .group-cards, .charts, .two-col, .three-col { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 640px) {
+      .notion-document { padding: 20px 14px 42px; }
+      .doc-icon { font-size: 42px; }
+      h1 { font-size: 32px; }
+      h2 { font-size: 22px; }
+      .cards, .metric-list { grid-template-columns: 1fr; }
+      .toolbar { flex-wrap: nowrap; }
+      button { flex: 0 0 auto; }
+      canvas { height: 230px; }
+      pre { max-height: 320px; }
     }
     @media print {
-      body { background: #fff; }
-      header { position: static; }
-      .toolbar { display: none; }
-      section { box-shadow: none; page-break-inside: avoid; }
+      body.notion-page { background: #fff; }
+      .notion-shell { display:block; }
+      .notion-toc, .toolbar { display: none; }
+      .notion-document { padding: 20px; }
+      .notion-block, .card, .group-card, .chart-card, details.notion-details { box-shadow: none; break-inside: avoid; }
       pre { max-height: none; }
     }
   </style>
 </head>
-<body>
-  <header>
-    <h1>Reporte experimental BFMA</h1>
-    <p class="subtitle" id="subtitle">Cargando datos…</p>
-    <div class="toolbar">
-      <button class="primary" onclick="window.print()">Imprimir / Guardar PDF</button>
-      <button onclick="copySummary()">Copiar resumen</button>
-      <button onclick="document.body.classList.toggle('hidden-long')">Ocultar respuestas largas</button>
-      <button onclick="document.body.classList.toggle('capture')">Modo captura para anexos</button>
-    </div>
-  </header>
-  <main>
-    <section>
-      <h2>Resumen ejecutivo</h2>
-      <div class="grid cards" id="cards"></div>
-    </section>
-
-    <section>
-      <h2>Comparación experimental por grupo</h2>
-      <p class="muted">Lectura rápida para asesor: G1 resume, G2 acumula memoria y G3 selecciona contexto bajo presupuesto.</p>
-      <div class="grid group-cards" id="groupCards"></div>
-    </section>
-
-    <section>
-      <h2>Cuadros comparativos G1/G2/G3</h2>
-      <div class="grid charts">
-        <div class="chart-card"><h3>Latencia promedio por grupo</h3><canvas id="groupLatencyChart"></canvas></div>
-        <div class="chart-card"><h3>Tamaño de respuesta final</h3><canvas id="groupAnswerChart"></canvas></div>
-        <div class="chart-card"><h3>Cobertura automática estimada</h3><canvas id="groupCoverageChart"></canvas></div>
-        <div class="chart-card"><h3>Memoria/contexto final por grupo</h3><canvas id="groupContextChart"></canvas></div>
-        <div class="chart-card"><h3>Presión de memoria: almacenado vs seleccionado</h3><canvas id="memoryPressureChart"></canvas></div>
-        <div class="chart-card"><h3>Decisiones BFMA acumuladas</h3><canvas id="groupDecisionChart"></canvas></div>
-      </div>
-    </section>
-
-    <section>
-      <h2>Lectura metodológica</h2>
-      <div id="methodology"></div>
-    </section>
-
-    <section>
-      <h2>Cuadros estadísticos</h2>
-      <div class="grid charts">
-        <div class="chart-card"><h3>Latencia por turno</h3><canvas id="latencyChart"></canvas></div>
-        <div class="chart-card"><h3>Crecimiento de memoria</h3><canvas id="memoryChart"></canvas></div>
-        <div class="chart-card"><h3>Decisiones BFMA keep vs discard</h3><canvas id="decisionChart"></canvas></div>
-        <div class="chart-card"><h3>Razones de descarte BFMA</h3><canvas id="reasonChart"></canvas></div>
-      </div>
-    </section>
-
-    <section>
-      <h2>Hallazgos observables</h2>
-      <ul class="findings" id="findings"></ul>
-    </section>
-
-    <section>
-      <h2>Tabla por turno</h2>
-      <div style="overflow:auto">
-        <table id="turnTable"></table>
-      </div>
-    </section>
-
-    <section class="long-content">
-      <h2>Comparación de respuestas finales</h2>
-      <div class="three-col" id="finalComparison"></div>
-    </section>
-
-    <section class="long-content">
-      <h2>Material para anexo</h2>
-      <div class="two-col">
-        <div>
-          <h3>Contexto final seleccionado</h3>
-          <pre id="finalContext"></pre>
+<body class="notion-page">
+  <div class="notion-shell">
+    <aside class="notion-toc" aria-label="Tabla de contenido">
+      <p class="toc-title">Contenido</p>
+      <a class="toc-link" href="#resumen">📌 Resumen</a>
+      <a class="toc-link" href="#comparacion">🧪 Comparación G1/G2/G3</a>
+      <a class="toc-link" href="#charts">📊 Cuadros comparativos</a>
+      <a class="toc-link" href="#metodologia">💡 Lectura metodológica</a>
+      <a class="toc-link" href="#respuestas">📝 Respuestas finales</a>
+      <a class="toc-link" href="#anexos">📎 Anexos</a>
+    </aside>
+    <main class="notion-document">
+      <header class="doc-header">
+        <div class="doc-icon">🧠</div>
+        <h1>Reporte experimental BFMA</h1>
+        <p class="subtitle" id="subtitle">Cargando datos…</p>
+        <div class="notion-meta" id="metadataBadges">
+          <span class="notion-badge">⏳ Cargando metadata</span>
         </div>
-        <div>
-          <h3>Respuesta final del agente</h3>
-          <pre id="finalAnswer"></pre>
+        <div class="toolbar">
+          <button class="primary" onclick="window.print()">Imprimir / Guardar PDF</button>
+          <button onclick="copySummary()">Copiar resumen</button>
+          <button onclick="document.body.classList.toggle('hidden-long')">Ocultar respuestas largas</button>
+          <button onclick="document.body.classList.toggle('capture')">Modo captura para anexos</button>
         </div>
-      </div>
-      <h3>Preguntas finales esperadas</h3>
-      <div style="overflow:auto">
-        <table id="questionsTable"></table>
-      </div>
-    </section>
-  </main>
+        <div class="notion-callout">
+          <span class="emoji">📌</span>
+          <p>Este reporte compara G1, G2 y G3 para observar cómo BFMA selecciona memoria relevante bajo presupuesto. Está diseñado para explicación al asesor y capturas para anexos.</p>
+        </div>
+        <div class="notion-callout">
+          <span class="emoji">⚠️</span>
+          <p><b>Cobertura automática estimada:</b> es una ayuda visual exploratoria. No debe presentarse como QA Accuracy formal.</p>
+        </div>
+      </header>
+
+      <section class="notion-block" id="resumen">
+        <h2>Resumen ejecutivo</h2>
+        <div class="grid cards" id="cards"></div>
+      </section>
+
+      <section class="notion-block" id="comparacion">
+        <h2>Comparación experimental por grupo</h2>
+        <p class="muted">Lectura rápida para asesor: G1 resume, G2 acumula memoria y G3 selecciona contexto bajo presupuesto.</p>
+        <div class="grid group-cards" id="groupCards"></div>
+      </section>
+
+      <section class="notion-block" id="charts">
+        <h2>Cuadros comparativos G1/G2/G3</h2>
+        <div class="grid charts">
+          <div class="chart-card"><h3>Latencia promedio por grupo</h3><canvas id="groupLatencyChart"></canvas></div>
+          <div class="chart-card"><h3>Tamaño de respuesta final</h3><canvas id="groupAnswerChart"></canvas></div>
+          <div class="chart-card"><h3>Cobertura automática estimada</h3><canvas id="groupCoverageChart"></canvas></div>
+          <div class="chart-card"><h3>Memoria/contexto final por grupo</h3><canvas id="groupContextChart"></canvas></div>
+          <div class="chart-card"><h3>Presión de memoria: almacenado vs seleccionado</h3><canvas id="memoryPressureChart"></canvas></div>
+          <div class="chart-card"><h3>Decisiones BFMA acumuladas</h3><canvas id="groupDecisionChart"></canvas></div>
+        </div>
+      </section>
+
+      <section class="notion-block" id="metodologia">
+        <h2>Lectura metodológica</h2>
+        <div class="notion-callout">
+          <span class="emoji">💡</span>
+          <div id="methodology"></div>
+        </div>
+      </section>
+
+      <section class="notion-block">
+        <h2>Cuadros estadísticos por turno</h2>
+        <div class="grid charts">
+          <div class="chart-card"><h3>Latencia por turno</h3><canvas id="latencyChart"></canvas></div>
+          <div class="chart-card"><h3>Crecimiento de memoria</h3><canvas id="memoryChart"></canvas></div>
+          <div class="chart-card"><h3>Decisiones BFMA keep vs discard</h3><canvas id="decisionChart"></canvas></div>
+          <div class="chart-card"><h3>Razones de descarte BFMA</h3><canvas id="reasonChart"></canvas></div>
+        </div>
+      </section>
+
+      <section class="notion-block">
+        <h2>Hallazgos observables</h2>
+        <div class="notion-callout">
+          <span class="emoji">📌</span>
+          <ul class="findings" id="findings"></ul>
+        </div>
+      </section>
+
+      <section class="notion-block">
+        <details class="notion-details" open>
+          <summary>Tabla por turno</summary>
+          <div class="details-body table-wrap">
+            <table id="turnTable"></table>
+          </div>
+        </details>
+      </section>
+
+      <section class="notion-block long-content" id="respuestas">
+        <h2>Comparación de respuestas finales</h2>
+        <div class="three-col" id="finalComparison"></div>
+      </section>
+
+      <section class="notion-block long-content" id="anexos">
+        <h2>Material para anexo</h2>
+        <details class="notion-details">
+          <summary>Contexto final seleccionado</summary>
+          <div class="details-body"><pre id="finalContext"></pre></div>
+        </details>
+        <details class="notion-details">
+          <summary>Respuesta final del agente</summary>
+          <div class="details-body"><pre id="finalAnswer"></pre></div>
+        </details>
+        <details class="notion-details" open>
+          <summary>Preguntas finales esperadas</summary>
+          <div class="details-body table-wrap"><table id="questionsTable"></table></div>
+        </details>
+      </section>
+    </main>
+  </div>
 
   <script>
     const REPORT_PAYLOAD = "{{.Payload}}";
     const bytes = Uint8Array.from(atob(REPORT_PAYLOAD), c => c.charCodeAt(0));
     const DATA = JSON.parse(new TextDecoder().decode(bytes));
-    const COLORS = { primary: "#2454d6", keep: "#0f766e", discard: "#dc6803", danger: "#c2410c", purple: "#7c3aed", grid: "#d9e2ec", text: "#172033" };
+    const COLORS = { primary: "#2f80ed", keep: "#448361", discard: "#d9730d", danger: "#d44c47", purple: "#6940a5", grid: "#e9e7e3", text: "#37352f" };
 
     function fmtMs(ms) {
       if (!ms) return "0 ms";
@@ -268,6 +392,12 @@ const htmlTemplate = `<!doctype html>
     }
     function render() {
       document.getElementById("subtitle").textContent = DATA.run_id + " · " + DATA.scenario_id + " · grupos: " + DATA.groups.join(", ");
+      document.getElementById("metadataBadges").innerHTML = [
+        '<span class="notion-badge badge-blue">Run ' + esc(DATA.run_id) + '</span>',
+        '<span class="notion-badge">Escenario ' + esc(DATA.scenario_id) + '</span>',
+        '<span class="notion-badge badge-green">Grupos ' + esc(DATA.groups.join(", ")) + '</span>',
+        '<span class="notion-badge">Generado ' + esc(DATA.generated_at) + '</span>'
+      ].join("");
       document.getElementById("cards").innerHTML = [
         card("Run ID", DATA.run_id, DATA.generated_at),
         card("Turnos", DATA.total_turns, DATA.success_turns + " exitosos · " + DATA.failed_turns + " fallidos"),
@@ -297,6 +427,12 @@ const htmlTemplate = `<!doctype html>
       drawStacked("decisionChart", DATA.keep_discard_by_turn);
       drawBar("reasonChart", DATA.reason_distribution.map(x => ({ label: x.label, value: x.value })), COLORS.discard, v => v);
     }
+    function groupBadge(g) {
+      if (g === "g1") return '<span class="notion-badge badge-orange">G1 baseline</span>';
+      if (g === "g2") return '<span class="notion-badge badge-blue">G2 memoria persistente</span>';
+      if (g === "g3") return '<span class="notion-badge badge-green">G3 BFMA</span>';
+      return '<span class="notion-badge">' + esc(g.toUpperCase()) + '</span>';
+    }
     function renderGroupComparison() {
       const cards = (DATA.group_summaries || []).map(g => {
         const contextLabel = g.group === "g1" ? "líneas resumen" : "memorias contexto";
@@ -306,8 +442,9 @@ const htmlTemplate = `<!doctype html>
         const bfmaLine = g.group === "g3"
           ? '<div class="metric"><span>BFMA final</span><b>' + g.final_keep + '/' + g.final_discard + '</b><small>keep/discard</small></div>'
           : '<div class="metric"><span>Contexto final</span><b>' + g.final_context_items + '</b><small>' + contextLabel + '</small></div>';
-        return '<div class="group-card">'
+        return '<article class="group-card">'
           + '<h3>' + esc(g.label) + '</h3>'
+          + groupBadge(g.group)
           + '<p class="muted">' + esc(g.strategy) + '</p>'
           + '<div class="coverage-bar"><span style="width:' + g.coverage_percent + '%"></span></div>'
           + '<p><b>Cobertura automática estimada:</b> ' + g.coverage_detected + '/' + g.coverage_total + ' (' + g.coverage_percent + '%)</p>'
@@ -320,7 +457,7 @@ const htmlTemplate = `<!doctype html>
           + '<div class="metric"><span>Budget</span><b>' + (g.token_budget ? (g.token_used + '/' + g.token_budget) : '—') + '</b><small>tokens contexto</small></div>'
           + '</div>'
           + '<p>' + esc(g.methodological_reading) + '</p>'
-          + '</div>';
+          + '</article>';
       }).join("");
       document.getElementById("groupCards").innerHTML = cards || '<p class="muted">No hay grupos para comparar.</p>';
     }
@@ -340,129 +477,134 @@ const htmlTemplate = `<!doctype html>
         const omissions = (g.omissions || []).length
           ? '<p><b>Posibles omisiones automáticas:</b> ' + g.omissions.map(x => esc(x.id)).join(", ") + '</p>'
           : '<p><b>Posibles omisiones automáticas:</b> ninguna detectada por coincidencia simple.</p>';
-        return '<div class="final-column">'
-          + '<h3>' + esc(g.label) + '</h3>'
+        return '<details class="notion-details final-column" open>'
+          + '<summary>' + esc(g.label) + '</summary>'
+          + '<div class="details-body">'
           + '<p class="muted">Contexto final: ' + g.final_context_items + ' ítems · respuesta: ' + g.final_answer_chars + ' caracteres</p>'
           + '<h4>Criterios esperados detectados</h4><ul class="coverage-list">' + coverage + '</ul>'
           + omissions
           + '<h4>Contexto final inyectado</h4><pre>' + esc(g.final_context || 'Sin contexto') + '</pre>'
           + '<h4>Respuesta final</h4><pre>' + esc(g.final_answer || 'Sin respuesta') + '</pre>'
-          + '</div>';
+          + '</div></details>';
       }).join("");
       document.getElementById("finalComparison").innerHTML = columns || '<p class="muted">No hay respuestas finales por grupo.</p>';
     }
-	function renderTurnTable() {
-		const rows = DATA.turns.map(t => {
-			const budget = t.token_budget ? (t.token_used + "/" + t.token_budget) : "—";
-			const statusClass = t.status === "failed" ? "failed" : "success";
-			return '<tr>'
-				+ '<td class="mono">' + esc(t.group) + ' T' + t.turn + '</td>'
-				+ '<td><span class="pill ' + statusClass + '">' + esc(t.status) + '</span></td>'
-				+ '<td>' + (t.attempt || 0) + '/' + (t.max_attempts || 0) + '</td>'
-				+ '<td>' + fmtMs(t.latency_ms) + '</td>'
-				+ '<td>' + t.memory_count + '</td>'
-				+ '<td style="color:' + COLORS.keep + ';font-weight:800">' + t.keep + '</td>'
-				+ '<td style="color:' + COLORS.discard + ';font-weight:800">' + t.discard + '</td>'
-				+ '<td>' + budget + '</td>'
-				+ '<td>' + esc(t.prompt_short) + '</td>'
-				+ '<td>' + esc(t.error || t.answer_short) + '</td>'
-				+ '</tr>';
-		}).join("");
-		document.getElementById("turnTable").innerHTML =
-			'<thead><tr><th>Turno</th><th>Estado</th><th>Intento</th><th>Latencia</th><th>Memoria</th><th>Keep</th><th>Discard</th><th>Budget</th><th>Prompt</th><th>Respuesta/Error</th></tr></thead>'
-			+ '<tbody>' + rows + '</tbody>';
-	}
-	function renderQuestions() {
-		const rows = (DATA.final_questions || []).map(q =>
-			'<tr><td class="mono">' + esc(q.id) + '</td><td>' + esc(q.question) + '</td><td>' + esc(q.expected_answer) + '</td></tr>'
-		).join("");
-		document.getElementById("questionsTable").innerHTML =
-			'<thead><tr><th>ID</th><th>Pregunta</th><th>Respuesta esperada</th></tr></thead><tbody>'
-			+ (rows || '<tr><td colspan="3">Sin preguntas finales.</td></tr>')
-			+ '</tbody>';
-	}
+    function renderTurnTable() {
+      const rows = DATA.turns.map(t => {
+        const budget = t.token_budget ? (t.token_used + "/" + t.token_budget) : "—";
+        const statusClass = t.status === "failed" ? "failed" : "success";
+        return '<tr>'
+          + '<td class="mono">' + esc(t.group) + ' T' + t.turn + '</td>'
+          + '<td><span class="pill ' + statusClass + '">' + esc(t.status) + '</span></td>'
+          + '<td>' + (t.attempt || 0) + '/' + (t.max_attempts || 0) + '</td>'
+          + '<td>' + fmtMs(t.latency_ms) + '</td>'
+          + '<td>' + t.memory_count + '</td>'
+          + '<td style="color:' + COLORS.keep + ';font-weight:800">' + t.keep + '</td>'
+          + '<td style="color:' + COLORS.discard + ';font-weight:800">' + t.discard + '</td>'
+          + '<td>' + budget + '</td>'
+          + '<td>' + esc(t.prompt_short) + '</td>'
+          + '<td>' + esc(t.error || t.answer_short) + '</td>'
+          + '</tr>';
+      }).join("");
+      document.getElementById("turnTable").innerHTML =
+        '<thead><tr><th>Turno</th><th>Estado</th><th>Intento</th><th>Latencia</th><th>Memoria</th><th>Keep</th><th>Discard</th><th>Budget</th><th>Prompt</th><th>Respuesta/Error</th></tr></thead>'
+        + '<tbody>' + rows + '</tbody>';
+    }
+    function renderQuestions() {
+      const rows = (DATA.final_questions || []).map(q =>
+        '<tr><td class="mono">' + esc(q.id) + '</td><td>' + esc(q.question) + '</td><td>' + esc(q.expected_answer) + '</td></tr>'
+      ).join("");
+      document.getElementById("questionsTable").innerHTML =
+        '<thead><tr><th>ID</th><th>Pregunta</th><th>Respuesta esperada</th></tr></thead><tbody>'
+        + (rows || '<tr><td colspan="3">Sin preguntas finales.</td></tr>')
+        + '</tbody>';
+    }
     function setupCanvas(id) {
       const canvas = document.getElementById(id);
       const ratio = window.devicePixelRatio || 1;
       const rect = canvas.getBoundingClientRect();
-      canvas.width = Math.max(640, Math.floor(rect.width * ratio));
-      canvas.height = Math.floor(280 * ratio);
+      const cssWidth = Math.max(280, rect.width || 320);
+      canvas.width = Math.floor(cssWidth * ratio);
+      canvas.height = Math.floor(260 * ratio);
       const ctx = canvas.getContext("2d");
-      ctx.scale(ratio, ratio);
-      return { canvas, ctx, w: canvas.width / ratio, h: canvas.height / ratio };
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      return { canvas, ctx, w: cssWidth, h: 260 };
     }
     function axes(ctx, w, h) {
       ctx.strokeStyle = COLORS.grid; ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(42, 18); ctx.lineTo(42, h-44); ctx.lineTo(w-12, h-44); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(38, 16); ctx.lineTo(38, h-40); ctx.lineTo(w-10, h-40); ctx.stroke();
     }
     function drawBar(id, points, color, formatter) {
       const {ctx,w,h} = setupCanvas(id); ctx.clearRect(0,0,w,h); axes(ctx,w,h);
       if (!points.length) { empty(ctx,w,h); return; }
       const max = Math.max(...points.map(p => p.value), 1);
-      const gap = 6; const bw = Math.max(8, (w-70) / points.length - gap);
+      const gap = Math.max(4, Math.min(8, 80 / points.length));
+      const bw = Math.max(6, (w-58) / points.length - gap);
       points.forEach((p,i) => {
-        const x = 50 + i*(bw+gap);
-        const bh = (h-74) * (p.value/max);
-        const y = h-44-bh;
+        const x = 46 + i*(bw+gap);
+        const bh = (h-68) * (p.value/max);
+        const y = h-40-bh;
         ctx.fillStyle = color; ctx.fillRect(x,y,bw,bh);
-        ctx.fillStyle = COLORS.text; ctx.font = "10px sans-serif"; ctx.save(); ctx.translate(x+2,h-30); ctx.rotate(-Math.PI/4); ctx.fillText(p.label,0,0); ctx.restore();
-        if (points.length <= 12) ctx.fillText(String(formatter ? formatter(p.value) : p.value), x, y-4);
+        ctx.fillStyle = COLORS.text; ctx.font = "10px sans-serif";
+        ctx.save(); ctx.translate(x+2,h-26); ctx.rotate(-Math.PI/4); ctx.fillText(p.label,0,0); ctx.restore();
+        if (points.length <= 8) ctx.fillText(String(formatter ? formatter(p.value) : p.value), x, y-4);
       });
     }
     function drawLine(id, points, color) {
       const {ctx,w,h} = setupCanvas(id); ctx.clearRect(0,0,w,h); axes(ctx,w,h);
       if (!points.length) { empty(ctx,w,h); return; }
       const max = Math.max(...points.map(p => p.value), 1);
-      const step = (w-72) / Math.max(points.length-1, 1);
-      ctx.strokeStyle = color; ctx.lineWidth = 3; ctx.beginPath();
+      const step = (w-58) / Math.max(points.length-1, 1);
+      ctx.strokeStyle = color; ctx.lineWidth = 2.5; ctx.beginPath();
       points.forEach((p,i) => {
-        const x = 48 + i*step; const y = h-44 - ((h-74)*(p.value/max));
+        const x = 44 + i*step; const y = h-40 - ((h-68)*(p.value/max));
         if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
       });
       ctx.stroke();
       points.forEach((p,i) => {
-        const x = 48 + i*step; const y = h-44 - ((h-74)*(p.value/max));
-        ctx.fillStyle = color; ctx.beginPath(); ctx.arc(x,y,4,0,Math.PI*2); ctx.fill();
+        const x = 44 + i*step; const y = h-40 - ((h-68)*(p.value/max));
+        ctx.fillStyle = color; ctx.beginPath(); ctx.arc(x,y,3.5,0,Math.PI*2); ctx.fill();
       });
     }
     function drawStacked(id, points) {
       const {ctx,w,h} = setupCanvas(id); ctx.clearRect(0,0,w,h); axes(ctx,w,h);
       if (!points.length) { empty(ctx,w,h); return; }
       const max = Math.max(...points.map(p => p.keep + p.discard), 1);
-      const gap = 6; const bw = Math.max(8, (w-70) / points.length - gap);
+      const gap = Math.max(4, Math.min(8, 80 / points.length));
+      const bw = Math.max(6, (w-58) / points.length - gap);
       points.forEach((p,i) => {
-        const x = 50 + i*(bw+gap);
-        const keepH = (h-74) * (p.keep/max);
-        const discardH = (h-74) * (p.discard/max);
-        ctx.fillStyle = COLORS.keep; ctx.fillRect(x,h-44-keepH,bw,keepH);
-        ctx.fillStyle = COLORS.discard; ctx.fillRect(x,h-44-keepH-discardH,bw,discardH);
-        ctx.fillStyle = COLORS.text; ctx.font = "10px sans-serif"; ctx.save(); ctx.translate(x+2,h-30); ctx.rotate(-Math.PI/4); ctx.fillText(p.label,0,0); ctx.restore();
+        const x = 46 + i*(bw+gap);
+        const keepH = (h-68) * (p.keep/max);
+        const discardH = (h-68) * (p.discard/max);
+        ctx.fillStyle = COLORS.keep; ctx.fillRect(x,h-40-keepH,bw,keepH);
+        ctx.fillStyle = COLORS.discard; ctx.fillRect(x,h-40-keepH-discardH,bw,discardH);
+        ctx.fillStyle = COLORS.text; ctx.font = "10px sans-serif"; ctx.save(); ctx.translate(x+2,h-26); ctx.rotate(-Math.PI/4); ctx.fillText(p.label,0,0); ctx.restore();
       });
     }
     function drawMemoryPressure(id, points) {
       const {ctx,w,h} = setupCanvas(id); ctx.clearRect(0,0,w,h); axes(ctx,w,h);
       if (!points.length) { empty(ctx,w,h); return; }
       const max = Math.max(...points.map(p => Math.max(p.stored || 0, p.selected || 0)), 1);
-      const gap = 18; const groupW = Math.max(50, (w-78) / points.length - gap);
+      const gap = 14; const groupW = Math.max(42, (w-64) / points.length - gap);
       points.forEach((p,i) => {
-        const x = 52 + i*(groupW+gap);
-        const bw = Math.max(12, groupW/3);
-        const storedH = (h-74) * ((p.stored || 0)/max);
-        const selectedH = (h-74) * ((p.selected || 0)/max);
-        ctx.fillStyle = COLORS.primary; ctx.fillRect(x,h-44-storedH,bw,storedH);
-        ctx.fillStyle = COLORS.keep; ctx.fillRect(x+bw+4,h-44-selectedH,bw,selectedH);
+        const x = 46 + i*(groupW+gap);
+        const bw = Math.max(10, groupW/3);
+        const storedH = (h-68) * ((p.stored || 0)/max);
+        const selectedH = (h-68) * ((p.selected || 0)/max);
+        ctx.fillStyle = COLORS.primary; ctx.fillRect(x,h-40-storedH,bw,storedH);
+        ctx.fillStyle = COLORS.keep; ctx.fillRect(x+bw+4,h-40-selectedH,bw,selectedH);
         ctx.fillStyle = COLORS.text; ctx.font = "10px sans-serif";
-        ctx.fillText(p.label, x, h-28);
+        ctx.fillText(p.label, x, h-24);
         if (points.length <= 6) {
-          ctx.fillText(String(p.stored || 0), x, h-48-storedH);
-          ctx.fillText(String(p.selected || 0), x+bw+4, h-48-selectedH);
+          ctx.fillText(String(p.stored || 0), x, h-44-storedH);
+          ctx.fillText(String(p.selected || 0), x+bw+4, h-44-selectedH);
         }
       });
-      ctx.fillStyle = COLORS.primary; ctx.fillRect(w-160, 20, 10, 10); ctx.fillStyle = COLORS.text; ctx.fillText("almacenado", w-145, 30);
-      ctx.fillStyle = COLORS.keep; ctx.fillRect(w-160, 38, 10, 10); ctx.fillStyle = COLORS.text; ctx.fillText("seleccionado", w-145, 48);
+      ctx.fillStyle = COLORS.primary; ctx.fillRect(w-142, 18, 9, 9); ctx.fillStyle = COLORS.text; ctx.fillText("almacenado", w-128, 27);
+      ctx.fillStyle = COLORS.keep; ctx.fillRect(w-142, 34, 9, 9); ctx.fillStyle = COLORS.text; ctx.fillText("seleccionado", w-128, 43);
     }
     function empty(ctx,w,h) {
-      ctx.fillStyle = "#667085"; ctx.font = "14px sans-serif"; ctx.fillText("Sin datos para este gráfico", 52, h/2);
+      ctx.fillStyle = "#787774"; ctx.font = "14px sans-serif"; ctx.fillText("Sin datos para este gráfico", 44, h/2);
     }
     function copySummary() {
       const text = [

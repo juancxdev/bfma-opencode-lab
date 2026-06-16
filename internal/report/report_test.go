@@ -174,7 +174,21 @@ func TestRenderProducesSelfContainedHTML(t *testing.T) {
 		t.Fatal(err)
 	}
 	html := b.String()
-	for _, want := range []string{"Reporte experimental BFMA", "Comparación experimental por grupo", "Lectura metodológica", "Comparación de respuestas finales", "REPORT_PAYLOAD", "drawBar", "run_html"} {
+	for _, want := range []string{
+		"Reporte experimental BFMA",
+		"Comparación experimental por grupo",
+		"Lectura metodológica",
+		"Comparación de respuestas finales",
+		"REPORT_PAYLOAD",
+		"drawBar",
+		"run_html",
+		"notion-page",
+		"notion-callout",
+		"notion-toc",
+		"details",
+		"Modo captura",
+		"canvas.width = Math.floor(cssWidth * ratio)",
+	} {
 		if !strings.Contains(html, want) {
 			t.Fatalf("html missing %q", want)
 		}
