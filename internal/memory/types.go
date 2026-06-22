@@ -42,11 +42,22 @@ type MemoryRecord struct {
 }
 
 type Event struct {
-	MemoryID     string             `json:"memory_id,omitempty"`
-	Type         string             `json:"type"`
-	Content      string             `json:"content,omitempty"`
-	Decision     string             `json:"decision,omitempty"`
-	UtilityScore float64            `json:"utility_score,omitempty"`
-	Components   map[string]float64 `json:"components,omitempty"`
-	Reason       string             `json:"reason,omitempty"`
+	MemoryID            string             `json:"memory_id,omitempty"`
+	Type                string             `json:"type"`
+	Content             string             `json:"content,omitempty"`
+	Decision            string             `json:"decision,omitempty"`
+	UtilityScore        float64            `json:"utility_score,omitempty"`
+	AntecedentScore     float64            `json:"antecedent_score,omitempty"`
+	BFMAUtility         float64            `json:"bfma_utility,omitempty"`
+	FormulaVersion      string             `json:"formula_version,omitempty"`
+	Components          map[string]float64 `json:"components,omitempty"`
+	Weights             map[string]float64 `json:"weights,omitempty"`
+	Reason              string             `json:"reason,omitempty"`
+	ObsolescenceReason  string             `json:"obsolescence_reason,omitempty"`
+	BudgetUsed          int                `json:"budget_used,omitempty"`
+	BudgetLimit         int                `json:"budget_limit,omitempty"`
+	TokenCost           int                `json:"token_cost,omitempty"`
+	FrequencyBonus      float64            `json:"frequency_bonus,omitempty"`
+	TokenCostPenalty    float64            `json:"token_cost_penalty,omitempty"`
+	ObsolescencePenalty float64            `json:"obsolescence_penalty,omitempty"`
 }

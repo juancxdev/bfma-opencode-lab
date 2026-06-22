@@ -28,6 +28,7 @@ type Config struct {
 	Retries      int
 	RetryBackoff time.Duration
 	FromTurn     int
+	BFMAConfig   memory.BFMAConfig
 }
 
 type Result struct {
@@ -283,7 +284,7 @@ func (r *Runner) newManager(runID string, group memory.Group) (memory.Manager, s
 		store := filepath.Join(r.cfg.DataDir, runID, string(group), "memories.jsonl")
 		return memory.NewPersistent(store, 8), "g2-persistent-agent", nil
 	case memory.GroupG3:
-		return memory.NewBFMA(220, 0.28), "g3-bfma-agent", nil
+		return memory.NewBFMAWithConfig(r.cfg.BFMAConfig), "g3-bfma-agent", nil
 	default:
 		return nil, "", fmt.Errorf("unsupported group %q", group)
 	}

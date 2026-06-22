@@ -54,6 +54,10 @@ type Data struct {
 	GroupCoverage        []ChartPoint              `json:"group_coverage"`
 	GroupContextSize     []ChartPoint              `json:"group_context_size"`
 	MemoryPressure       []MemoryPressure          `json:"memory_pressure"`
+	FormulaVersions      []string                  `json:"formula_versions,omitempty"`
+	AvgAntecedentScore   float64                   `json:"avg_antecedent_score,omitempty"`
+	AvgBFMAUtility       float64                   `json:"avg_bfma_utility,omitempty"`
+	ObsoleteDiscardCount int                       `json:"obsolete_discard_count,omitempty"`
 	EvaluationAvailable  bool                      `json:"evaluation_available"`
 	EvaluationGroups     []evaluation.GroupMetrics `json:"evaluation_groups,omitempty"`
 	EvaluationConclusion []string                  `json:"evaluation_conclusion,omitempty"`
@@ -61,21 +65,24 @@ type Data struct {
 }
 
 type TurnSummary struct {
-	Group       string `json:"group"`
-	Turn        int    `json:"turn"`
-	Status      string `json:"status"`
-	Attempt     int    `json:"attempt"`
-	MaxAttempts int    `json:"max_attempts"`
-	LatencyMS   int64  `json:"latency_ms"`
-	MemoryCount int    `json:"memory_count"`
-	Keep        int    `json:"keep"`
-	Discard     int    `json:"discard"`
-	TokenBudget int    `json:"token_budget"`
-	TokenUsed   int    `json:"token_used"`
-	PromptShort string `json:"prompt_short"`
-	AnswerShort string `json:"answer_short"`
-	Error       string `json:"error,omitempty"`
-	FinalTurn   bool   `json:"final_turn"`
+	Group              string  `json:"group"`
+	Turn               int     `json:"turn"`
+	Status             string  `json:"status"`
+	Attempt            int     `json:"attempt"`
+	MaxAttempts        int     `json:"max_attempts"`
+	LatencyMS          int64   `json:"latency_ms"`
+	MemoryCount        int     `json:"memory_count"`
+	Keep               int     `json:"keep"`
+	Discard            int     `json:"discard"`
+	TokenBudget        int     `json:"token_budget"`
+	TokenUsed          int     `json:"token_used"`
+	AvgAntecedentScore float64 `json:"avg_antecedent_score,omitempty"`
+	AvgBFMAUtility     float64 `json:"avg_bfma_utility,omitempty"`
+	ObsoleteDiscard    int     `json:"obsolete_discard,omitempty"`
+	PromptShort        string  `json:"prompt_short"`
+	AnswerShort        string  `json:"answer_short"`
+	Error              string  `json:"error,omitempty"`
+	FinalTurn          bool    `json:"final_turn"`
 }
 
 type GroupSummary struct {
@@ -350,6 +357,11 @@ func aggregate(entries []instrumentation.TurnLog, files []string) Data {
 		if keep+discard > 0 {
 			data.HasBFMA = true
 		}
+		antecedentAvg, utilityAvg, obsoleteDiscard, versions := bfmaScoreStats(entry.MemoryPreEvents)
+		data.AvgAntecedentScore += antecedentAvg
+		data.AvgBFMAUtility += utilityAvg
+		data.ObsoleteDiscardCount += obsoleteDiscard
+		data.FormulaVersions = appendUnique(data.FormulaVersions, versions...)
 		for _, event := range entry.MemoryPreEvents {
 			if event.Type == "bfma_decision" && event.Decision == "discard" && event.Reason != "" {
 				data.ReasonCounts[event.Reason]++
@@ -360,21 +372,24 @@ func aggregate(entries []instrumentation.TurnLog, files []string) Data {
 		tokenUsed := parseTokenUsed(entry.MemoryContextInjected)
 		label := fmt.Sprintf("%s T%d", entry.Group, entry.Turn)
 		summary := TurnSummary{
-			Group:       entry.Group,
-			Turn:        entry.Turn,
-			Status:      entry.Status,
-			Attempt:     entry.Attempt,
-			MaxAttempts: entry.MaxAttempts,
-			LatencyMS:   entry.LatencyMS,
-			MemoryCount: memoryCount,
-			Keep:        keep,
-			Discard:     discard,
-			TokenBudget: tokenBudget,
-			TokenUsed:   tokenUsed,
-			PromptShort: shorten(entry.UserPrompt, 180),
-			AnswerShort: shorten(entry.AssistantResponse, 220),
-			Error:       entry.Error,
-			FinalTurn:   len(entry.FinalQuestions) > 0,
+			Group:              entry.Group,
+			Turn:               entry.Turn,
+			Status:             entry.Status,
+			Attempt:            entry.Attempt,
+			MaxAttempts:        entry.MaxAttempts,
+			LatencyMS:          entry.LatencyMS,
+			MemoryCount:        memoryCount,
+			Keep:               keep,
+			Discard:            discard,
+			TokenBudget:        tokenBudget,
+			TokenUsed:          tokenUsed,
+			AvgAntecedentScore: roundFloat(antecedentAvg),
+			AvgBFMAUtility:     roundFloat(utilityAvg),
+			ObsoleteDiscard:    obsoleteDiscard,
+			PromptShort:        shorten(entry.UserPrompt, 180),
+			AnswerShort:        shorten(entry.AssistantResponse, 220),
+			Error:              entry.Error,
+			FinalTurn:          len(entry.FinalQuestions) > 0,
 		}
 		data.Turns = append(data.Turns, summary)
 		data.LatencyByTurn = append(data.LatencyByTurn, ChartPoint{Label: label, Value: entry.LatencyMS, Group: entry.Group})
@@ -387,6 +402,10 @@ func aggregate(entries []instrumentation.TurnLog, files []string) Data {
 	data.TotalTurns = len(data.Turns)
 	if latencyCount > 0 {
 		data.AvgLatencyMS = latencySum / latencyCount
+	}
+	if data.TotalTurns > 0 {
+		data.AvgAntecedentScore = roundFloat(data.AvgAntecedentScore / float64(data.TotalTurns))
+		data.AvgBFMAUtility = roundFloat(data.AvgBFMAUtility / float64(data.TotalTurns))
 	}
 	for group := range groupSet {
 		data.Groups = append(data.Groups, group)
@@ -502,6 +521,57 @@ func buildGroupComparisons(groups []string, entriesByGroup map[string][]instrume
 		summaries = append(summaries, summary)
 	}
 	return summaries, finals
+}
+
+func bfmaScoreStats(events []memory.Event) (float64, float64, int, []string) {
+	var antecedentSum float64
+	var utilitySum float64
+	var count float64
+	obsoleteDiscard := 0
+	versions := []string{}
+	for _, event := range events {
+		if event.Type != "bfma_decision" {
+			continue
+		}
+		if event.AntecedentScore > 0 {
+			antecedentSum += event.AntecedentScore
+			count++
+		}
+		if event.BFMAUtility > 0 {
+			utilitySum += event.BFMAUtility
+		} else if event.UtilityScore > 0 {
+			utilitySum += event.UtilityScore
+		}
+		if event.Reason == "obsolete_replaced" {
+			obsoleteDiscard++
+		}
+		if event.FormulaVersion != "" {
+			versions = appendUnique(versions, event.FormulaVersion)
+		}
+	}
+	if count == 0 {
+		return 0, 0, obsoleteDiscard, versions
+	}
+	return antecedentSum / count, utilitySum / count, obsoleteDiscard, versions
+}
+
+func appendUnique(existing []string, values ...string) []string {
+	seen := map[string]bool{}
+	for _, value := range existing {
+		seen[value] = true
+	}
+	for _, value := range values {
+		if value == "" || seen[value] {
+			continue
+		}
+		seen[value] = true
+		existing = append(existing, value)
+	}
+	return existing
+}
+
+func roundFloat(v float64) float64 {
+	return float64(int(v*1000+0.5)) / 1000
 }
 
 func countDecisions(events []memory.Event) (int, int) {

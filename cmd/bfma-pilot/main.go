@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"bfma-opencode-lab/internal/memory"
 	"bfma-opencode-lab/internal/opencode"
 	"bfma-opencode-lab/internal/runner"
 )
@@ -24,6 +25,17 @@ func main() {
 		retries     = flag.Int("retries", 0, "number of retries per OpenCode turn after a failed attempt")
 		fromTurn    = flag.Int("from-turn", 0, "resume from this scenario turn after reconstructing prior memory without LLM calls")
 	)
+	defaultBFMA := memory.DefaultBFMAConfig()
+	var (
+		bfmaTokenBudget        = flag.Int("bfma-token-budget", defaultBFMA.TokenBudget, "BFMA active-context token budget")
+		bfmaKeepMinScore       = flag.Float64("bfma-keep-min-score", defaultBFMA.KeepMinScore, "minimum BFMA utility required to keep a memory in active context")
+		bfmaWeightRelevance    = flag.Float64("bfma-weight-relevance", defaultBFMA.Weights.Relevance, "antecedent score weight for relevance")
+		bfmaWeightImportance   = flag.Float64("bfma-weight-importance", defaultBFMA.Weights.Importance, "antecedent score weight for importance")
+		bfmaWeightRecency      = flag.Float64("bfma-weight-recency", defaultBFMA.Weights.Recency, "antecedent score weight for recency")
+		bfmaWeightFrequency    = flag.Float64("bfma-weight-frequency", defaultBFMA.Weights.Frequency, "BFMA extension weight for frequency bonus")
+		bfmaWeightTokenCost    = flag.Float64("bfma-weight-token-cost", defaultBFMA.Weights.TokenCost, "BFMA extension weight for token cost penalty")
+		bfmaWeightObsolescence = flag.Float64("bfma-weight-obsolescence", defaultBFMA.Weights.Obsolescence, "BFMA extension weight for obsolescence penalty")
+	)
 	flag.Parse()
 
 	projectDir, err := os.Getwd()
@@ -34,6 +46,19 @@ func main() {
 	if err != nil {
 		fatal(err)
 	}
+	bfmaConfig := memory.BFMAConfig{
+		TokenBudget:  *bfmaTokenBudget,
+		KeepMinScore: *bfmaKeepMinScore,
+		Weights: memory.ScoreWeights{
+			Relevance:    *bfmaWeightRelevance,
+			Importance:   *bfmaWeightImportance,
+			Recency:      *bfmaWeightRecency,
+			Frequency:    *bfmaWeightFrequency,
+			TokenCost:    *bfmaWeightTokenCost,
+			Obsolescence: *bfmaWeightObsolescence,
+		},
+	}.Normalize()
+
 	cfg := runner.Config{
 		ProjectDir:  projectDir,
 		ScenarioDir: filepath.Join(projectDir, "scenarios"),
@@ -47,6 +72,7 @@ func main() {
 		Timeout:     *timeout,
 		Retries:     *retries,
 		FromTurn:    *fromTurn,
+		BFMAConfig:  bfmaConfig,
 	}
 	r := runner.New(cfg, opencode.NewCLIClient("opencode"))
 	result, err := r.Run(context.Background())

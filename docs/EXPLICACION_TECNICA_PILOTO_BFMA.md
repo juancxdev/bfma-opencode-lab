@@ -422,17 +422,22 @@ La memoria crece acumulativamente.
 
 G3 también guarda memorias, pero en cada `BuildContext` decide cuáles entran al contexto mediante BFMA.
 
-La función de utilidad actual es:
+La implementación refactorizada separa el cálculo en dos etapas:
 
 ```text
-utility =
-  0.30 * importance
-+ 0.25 * relevance
-+ 0.15 * recency
-+ 0.10 * frequency
-- 0.10 * token_cost
-- 0.10 * obsolescence
+AntecedentScore =
+  wR * relevance
++ wI * importance
++ wC * recency
+
+BFMAUtility =
+  AntecedentScore
++ wF * frequency
+- wT * token_cost
+- wO * obsolescence
 ```
+
+La versión de fórmula registrada en los logs es `bfma_base_extension_v1`.
 
 Donde:
 
@@ -443,7 +448,7 @@ Donde:
 | `recency` | `1 / (edad + 1)`, favorece memorias recientes. |
 | `frequency` | Frecuencia normalizada de aparición/uso. |
 | `token_cost` | Penalización por costo aproximado de tokens. |
-| `obsolescence` | Penalización heurística si aparecen señales como “reemplaza”, “ya no” o “cambia”. |
+| `obsolescence` | Penalización por relación de reemplazo detectada entre una memoria anterior y otra posterior con etiquetas compartidas. |
 
 La decisión es:
 
@@ -483,6 +488,24 @@ Razones posibles:
 | `token_budget_exceeded` | La utilidad es suficiente, pero no cabe en el presupuesto restante. |
 
 ---
+
+
+### 9.4. Configuración de pesos BFMA desde CLI
+
+El runner recibe una `BFMAConfig` con presupuesto, umbral y pesos. Los valores por defecto son:
+
+| Parámetro | Valor |
+|---|---:|
+| `--bfma-token-budget` | `220` |
+| `--bfma-keep-min-score` | `0.28` |
+| `--bfma-weight-relevance` | `0.25` |
+| `--bfma-weight-importance` | `0.30` |
+| `--bfma-weight-recency` | `0.15` |
+| `--bfma-weight-frequency` | `0.10` |
+| `--bfma-weight-token-cost` | `0.10` |
+| `--bfma-weight-obsolescence` | `0.10` |
+
+Esto permite documentar y replicar la configuración usada en cada corrida. Los pesos también quedan registrados en cada evento `bfma_decision` dentro de los logs JSONL.
 
 ## 10. Registro de logs JSONL
 

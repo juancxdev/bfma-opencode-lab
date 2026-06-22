@@ -418,6 +418,8 @@ const htmlTemplate = `<!doctype html>
         card("Keep BFMA", DATA.total_keep, "Decisiones de conservación"),
         card("Discard BFMA", DATA.total_discard, "Decisiones de olvido/descarte"),
         card("Reintentos", DATA.retry_count, DATA.has_failures ? "Hubo fallos registrados" : "Sin fallos registrados"),
+        card("Fórmula BFMA", (DATA.formula_versions || []).join(", ") || "sin traza", "Versión registrada en bfma_decision"),
+        card("Score BFMA", Number(DATA.avg_bfma_utility || 0).toFixed(3), "Utilidad promedio registrada"),
         card("Grupos", DATA.groups.join(", "), DATA.groups.length === 1 ? "Corrida parcial" : "Corrida comparativa")
       ].join("");
       document.getElementById("findings").innerHTML = DATA.findings.map(x => "<li>"+esc(x)+"</li>").join("");
@@ -506,6 +508,7 @@ const htmlTemplate = `<!doctype html>
         "G1 representa el baseline con resumen incremental: la memoria se comprime y puede sufrir summary drift.",
         "G2 representa memoria persistente: conserva más información, pero puede arrastrar ruido u obsolescencia.",
         "G3 representa BFMA: selecciona el contexto por utilidad y presupuesto, por eso no compite por recordar más sino por recordar lo relevante.",
+        "El score base separa criterios del antecedente (relevancia, importancia y recencia) de la extensión BFMA (frecuencia, costo de tokens, obsolescencia y presupuesto).",
         "El olvido presupuestado observado en este demo significa exclusión del contexto activo, no borrado permanente del almacén de memoria.",
         hasAll ? "Este run contiene G1, G2 y G3; por lo tanto sirve como evidencia comparativa visual." : "Este run no contiene todos los grupos; usarlo como evidencia parcial."
       ];
@@ -542,12 +545,15 @@ const htmlTemplate = `<!doctype html>
           + '<td style="color:' + COLORS.keep + ';font-weight:800">' + t.keep + '</td>'
           + '<td style="color:' + COLORS.discard + ';font-weight:800">' + t.discard + '</td>'
           + '<td>' + budget + '</td>'
+          + '<td>' + Number(t.avg_antecedent_score || 0).toFixed(3) + '</td>'
+          + '<td>' + Number(t.avg_bfma_utility || 0).toFixed(3) + '</td>'
+          + '<td>' + Number(t.obsolete_discard || 0) + '</td>'
           + '<td>' + esc(t.prompt_short) + '</td>'
           + '<td>' + esc(t.error || t.answer_short) + '</td>'
           + '</tr>';
       }).join("");
       document.getElementById("turnTable").innerHTML =
-        '<thead><tr><th>Turno</th><th>Estado</th><th>Intento</th><th>Latencia</th><th>Memoria</th><th>Keep</th><th>Discard</th><th>Budget</th><th>Prompt</th><th>Respuesta/Error</th></tr></thead>'
+        '<thead><tr><th>Turno</th><th>Estado</th><th>Intento</th><th>Latencia</th><th>Memoria</th><th>Keep</th><th>Discard</th><th>Budget</th><th>Score antecedente</th><th>Utilidad BFMA</th><th>Olvido obsolescencia</th><th>Prompt</th><th>Respuesta/Error</th></tr></thead>'
         + '<tbody>' + rows + '</tbody>';
     }
     function renderQuestions() {

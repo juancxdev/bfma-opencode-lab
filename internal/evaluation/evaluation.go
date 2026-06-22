@@ -25,15 +25,19 @@ type Options struct {
 }
 
 type Result struct {
-	RunID            string         `json:"run_id"`
-	ScenarioID       string         `json:"scenario_id"`
-	Rows             []MetricRow    `json:"rows"`
-	Groups           []GroupMetrics `json:"groups"`
-	Conclusion       []string       `json:"conclusion"`
-	Warnings         []string       `json:"warnings"`
-	MetricsCSVPath   string         `json:"metrics_csv_path,omitempty"`
-	SummaryJSONPath  string         `json:"summary_json_path,omitempty"`
-	ConclusionMDPath string         `json:"conclusion_md_path,omitempty"`
+	RunID                string         `json:"run_id"`
+	ScenarioID           string         `json:"scenario_id"`
+	Rows                 []MetricRow    `json:"rows"`
+	Groups               []GroupMetrics `json:"groups"`
+	Conclusion           []string       `json:"conclusion"`
+	Warnings             []string       `json:"warnings"`
+	FormulaVersions      []string       `json:"formula_versions,omitempty"`
+	AvgAntecedentScore   float64        `json:"avg_antecedent_score,omitempty"`
+	AvgBFMAUtility       float64        `json:"avg_bfma_utility,omitempty"`
+	ObsoleteDiscardCount int            `json:"obsolete_discard_count,omitempty"`
+	MetricsCSVPath       string         `json:"metrics_csv_path,omitempty"`
+	SummaryJSONPath      string         `json:"summary_json_path,omitempty"`
+	ConclusionMDPath     string         `json:"conclusion_md_path,omitempty"`
 }
 
 type MetricRow struct {
@@ -135,6 +139,7 @@ func buildResult(entries []instrumentation.TurnLog, sc extendedScenario) Result 
 		return entries[i].Turn < entries[j].Turn
 	})
 	res := Result{RunID: entries[0].RunID, ScenarioID: entries[0].ScenarioID}
+	res.AvgAntecedentScore, res.AvgBFMAUtility, res.ObsoleteDiscardCount, res.FormulaVersions = bfmaTraceSummary(entries)
 	finals := finalSuccessfulEntries(entries)
 	for _, entry := range finals {
 		questions := entry.FinalQuestions
@@ -189,6 +194,49 @@ func buildResult(entries []instrumentation.TurnLog, sc extendedScenario) Result 
 	res.Groups = summarizeGroups(res.Rows)
 	res.Conclusion = conclusionFor(res.Groups, res.Warnings)
 	return res
+}
+
+func bfmaTraceSummary(entries []instrumentation.TurnLog) (float64, float64, int, []string) {
+	var antecedentSum float64
+	var utilitySum float64
+	var count float64
+	obsoleteDiscard := 0
+	versions := []string{}
+	for _, entry := range entries {
+		for _, event := range entry.MemoryPreEvents {
+			if event.Type != "bfma_decision" {
+				continue
+			}
+			if event.AntecedentScore > 0 {
+				antecedentSum += event.AntecedentScore
+				count++
+			}
+			if event.BFMAUtility > 0 {
+				utilitySum += event.BFMAUtility
+			} else if event.UtilityScore > 0 {
+				utilitySum += event.UtilityScore
+			}
+			if event.Reason == "obsolete_replaced" {
+				obsoleteDiscard++
+			}
+			if event.FormulaVersion != "" {
+				versions = appendUniqueString(versions, event.FormulaVersion)
+			}
+		}
+	}
+	if count == 0 {
+		return 0, 0, obsoleteDiscard, versions
+	}
+	return round4(antecedentSum / count), round4(utilitySum / count), obsoleteDiscard, versions
+}
+
+func appendUniqueString(existing []string, value string) []string {
+	for _, item := range existing {
+		if item == value {
+			return existing
+		}
+	}
+	return append(existing, value)
 }
 
 func finalSuccessfulEntries(entries []instrumentation.TurnLog) []instrumentation.TurnLog {
@@ -374,6 +422,10 @@ func renderConclusionMarkdown(res Result) string {
 	b.WriteString("# Evaluación exploratoria del demo técnico BFMA\n\n")
 	b.WriteString(fmt.Sprintf("- Run: `%s`\n- Escenario: `%s`\n\n", res.RunID, res.ScenarioID))
 	b.WriteString("## Lectura metodológica\n\n")
+	if len(res.FormulaVersions) > 0 {
+		b.WriteString(fmt.Sprintf("- Fórmula BFMA registrada: `%s`; score antecedente promedio: %.3f; utilidad BFMA promedio: %.3f; descartes por obsolescencia: %d.\n", strings.Join(res.FormulaVersions, ", "), res.AvgAntecedentScore, res.AvgBFMAUtility, res.ObsoleteDiscardCount))
+	}
+
 	for _, line := range res.Conclusion {
 		b.WriteString("- ")
 		b.WriteString(line)

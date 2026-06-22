@@ -10,30 +10,27 @@ import (
 )
 
 type BFMA struct {
-	records      []MemoryRecord
-	lastEvents   []Event
-	turnCounter  int
-	tokenBudget  int
-	keepMinScore float64
+	records     []MemoryRecord
+	lastEvents  []Event
+	turnCounter int
+	config      BFMAConfig
 }
 
 func NewBFMA(tokenBudget int, keepMinScore float64) *BFMA {
-	if tokenBudget <= 0 {
-		tokenBudget = 220
-	}
-	if keepMinScore <= 0 {
-		keepMinScore = 0.28
-	}
-	return &BFMA{tokenBudget: tokenBudget, keepMinScore: keepMinScore}
+	return NewBFMAWithConfig(NewBFMAConfig(tokenBudget, keepMinScore))
+}
+
+func NewBFMAWithConfig(config BFMAConfig) *BFMA {
+	return &BFMA{config: config.Normalize()}
 }
 
 func (m *BFMA) BuildContext(turn scenario.Turn) (Context, error) {
 	m.turnCounter = turn.Turn
 	scored := make([]scoredMemory, 0, len(m.records))
 	for _, r := range m.records {
-		components := m.components(r, turn)
-		utility := utilityScore(components)
-		scored = append(scored, scoredMemory{record: r, components: components, utility: utility})
+		components, obsolescence := m.components(r, turn)
+		breakdown := CalculateScore(components, m.config.Weights)
+		scored = append(scored, scoredMemory{record: r, breakdown: breakdown, utility: breakdown.BFMAUtility, obsolescence: obsolescence})
 	}
 	sort.SliceStable(scored, func(i, j int) bool { return scored[i].utility > scored[j].utility })
 
@@ -42,29 +39,35 @@ func (m *BFMA) BuildContext(turn scenario.Turn) (Context, error) {
 	events := []Event{}
 	for _, item := range scored {
 		cost := estimateTokens(item.record.Content)
-		decision := "discard"
-		reason := "below_min_score"
-		if item.utility >= m.keepMinScore && usedTokens+cost <= m.tokenBudget {
-			decision = "keep"
-			reason = "within_budget"
+		decision := DecideForget(item.utility, m.config.KeepMinScore, usedTokens, cost, m.config.TokenBudget, item.obsolescence)
+		if decision.Decision == "keep" {
 			usedTokens += cost
 			selected = append(selected, item.record)
-		} else if item.utility >= m.keepMinScore {
-			reason = "token_budget_exceeded"
 		}
 		events = append(events, Event{
-			Type:         "bfma_decision",
-			MemoryID:     item.record.ID,
-			Content:      item.record.Content,
-			Decision:     decision,
-			UtilityScore: round3(item.utility),
-			Components:   roundComponents(item.components),
-			Reason:       reason,
+			Type:                "bfma_decision",
+			MemoryID:            item.record.ID,
+			Content:             item.record.Content,
+			Decision:            decision.Decision,
+			UtilityScore:        item.breakdown.BFMAUtility,
+			AntecedentScore:     item.breakdown.AntecedentScore,
+			BFMAUtility:         item.breakdown.BFMAUtility,
+			FormulaVersion:      item.breakdown.FormulaVersion,
+			Components:          componentsMap(item.breakdown.Components),
+			Weights:             weightsMap(item.breakdown.Weights),
+			Reason:              decision.Reason,
+			ObsolescenceReason:  item.obsolescence.Reason,
+			BudgetUsed:          usedTokens,
+			BudgetLimit:         m.config.TokenBudget,
+			TokenCost:           cost,
+			FrequencyBonus:      item.breakdown.FrequencyBonus,
+			TokenCostPenalty:    item.breakdown.TokenCostPenalty,
+			ObsolescencePenalty: item.breakdown.ObsolescencePenalty,
 		})
 	}
 	m.lastEvents = events
 
-	lines := []string{fmt.Sprintf("Memorias seleccionadas por BFMA (presupuesto %d tokens, usados %d):", m.tokenBudget, usedTokens)}
+	lines := []string{fmt.Sprintf("Memorias seleccionadas por BFMA (presupuesto %d tokens, usados %d):", m.config.TokenBudget, usedTokens)}
 	for _, r := range selected {
 		lines = append(lines, fmt.Sprintf("- [%s] %s", r.ID, r.Content))
 	}
@@ -110,44 +113,36 @@ func (m *BFMA) Observe(turn scenario.Turn, response AgentResponse) ([]Event, err
 
 func (m *BFMA) Snapshot() Snapshot {
 	return Snapshot{
-		"memory_count":   len(m.records),
-		"memories":       append([]MemoryRecord(nil), m.records...),
-		"token_budget":   m.tokenBudget,
-		"keep_min_score": m.keepMinScore,
+		"memory_count":    len(m.records),
+		"memories":        append([]MemoryRecord(nil), m.records...),
+		"token_budget":    m.config.TokenBudget,
+		"keep_min_score":  m.config.KeepMinScore,
+		"formula_version": BFMAFormulaVersion,
+		"weights":         weightsMap(m.config.Weights),
 	}
 }
 
 type scoredMemory struct {
-	record     MemoryRecord
-	components map[string]float64
-	utility    float64
+	record       MemoryRecord
+	breakdown    ScoreBreakdown
+	utility      float64
+	obsolescence ObsolescenceAssessment
 }
 
-func (m *BFMA) components(record MemoryRecord, turn scenario.Turn) map[string]float64 {
+func (m *BFMA) components(record MemoryRecord, turn scenario.Turn) (ScoreComponents, ObsolescenceAssessment) {
 	age := turn.Turn - record.SourceTurn
 	if age < 0 {
 		age = 0
 	}
-	return map[string]float64{
-		"importance":   clamp01(record.Importance),
-		"relevance":    overlapScore(turn.UserPrompt, record.Content),
-		"recency":      clamp01(1.0 / float64(age+1)),
-		"frequency":    clamp01(float64(record.Frequency) / 5.0),
-		"token_cost":   clamp01(float64(estimateTokens(record.Content)) / float64(m.tokenBudget)),
-		"obsolescence": obsolescenceScore(record, turn),
-	}
-}
-
-func utilityScore(c map[string]float64) float64 {
-	return clamp01(0.30*c["importance"] + 0.25*c["relevance"] + 0.15*c["recency"] + 0.10*c["frequency"] - 0.10*c["token_cost"] - 0.10*c["obsolescence"])
-}
-
-func obsolescenceScore(record MemoryRecord, turn scenario.Turn) float64 {
-	content := strings.ToLower(record.Content + " " + turn.UserPrompt)
-	if strings.Contains(content, "reemplaza") || strings.Contains(content, "ya no") || strings.Contains(content, "cambia") {
-		return 0.55
-	}
-	return 0
+	obsolescence := AssessObsolescence(record, m.records)
+	return ScoreComponents{
+		Importance:   clamp01(record.Importance),
+		Relevance:    overlapScore(turn.UserPrompt, record.Content),
+		Recency:      clamp01(1.0 / float64(age+1)),
+		Frequency:    clamp01(float64(record.Frequency) / 5.0),
+		TokenCost:    clamp01(float64(estimateTokens(record.Content)) / float64(m.config.TokenBudget)),
+		Obsolescence: obsolescence.Score,
+	}, obsolescence
 }
 
 func (m *BFMA) findSimilar(content string) int {
@@ -159,12 +154,26 @@ func (m *BFMA) findSimilar(content string) int {
 	return -1
 }
 
-func roundComponents(in map[string]float64) map[string]float64 {
-	out := map[string]float64{}
-	for k, v := range in {
-		out[k] = round3(v)
+func componentsMap(c ScoreComponents) map[string]float64 {
+	return map[string]float64{
+		"importance":   c.Importance,
+		"relevance":    c.Relevance,
+		"recency":      c.Recency,
+		"frequency":    c.Frequency,
+		"token_cost":   c.TokenCost,
+		"obsolescence": c.Obsolescence,
 	}
-	return out
+}
+
+func weightsMap(w ScoreWeights) map[string]float64 {
+	return map[string]float64{
+		"importance":   w.Importance,
+		"relevance":    w.Relevance,
+		"recency":      w.Recency,
+		"frequency":    w.Frequency,
+		"token_cost":   w.TokenCost,
+		"obsolescence": w.Obsolescence,
+	}
 }
 
 func round3(v float64) float64 { return float64(int(v*1000+0.5)) / 1000 }

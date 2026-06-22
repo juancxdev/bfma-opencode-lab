@@ -51,6 +51,24 @@ go run ./cmd/bfma-pilot \
 ```
 
 
+
+### Configuración explícita de BFMA
+
+La arquitectura BFMA ya no usa una fórmula opaca hard-codeada. El piloto registra la versión `bfma_base_extension_v1` y permite configurar presupuesto, umbral y pesos desde la línea de comandos:
+
+```bash
+go run ./cmd/bfma-pilot   --scenario scenario_03_gestion_academica_longitudinal   --groups g3   --reps 1   --simulate-llm   --bfma-token-budget 220   --bfma-keep-min-score 0.28   --bfma-weight-relevance 0.25   --bfma-weight-importance 0.30   --bfma-weight-recency 0.15   --bfma-weight-frequency 0.10   --bfma-weight-token-cost 0.10   --bfma-weight-obsolescence 0.10
+```
+
+El score se calcula en dos etapas:
+
+```text
+AntecedentScore = relevance*wR + importance*wI + recency*wC
+BFMAUtility = AntecedentScore + frequency*wF - token_cost*wT - obsolescence*wO
+```
+
+El olvido presupuestado se operacionaliza como exclusión del contexto activo, no como borrado permanente de la memoria almacenada.
+
 ## Evaluación exploratoria alineada a tesis
 
 El reporte visual sigue siendo útil para demo técnico, pero la matriz de consistencia requiere métricas explícitas. Para convertir los logs en métricas exploratorias de F1, SubEM, falsas memorias, contradicciones, tokens, almacenamiento y latencia:
