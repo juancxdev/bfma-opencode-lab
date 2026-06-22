@@ -14,45 +14,50 @@ import (
 	"strings"
 	"time"
 
+	"bfma-opencode-lab/internal/evaluation"
 	"bfma-opencode-lab/internal/instrumentation"
 	"bfma-opencode-lab/internal/memory"
 	"bfma-opencode-lab/internal/scenario"
 )
 
 type Data struct {
-	RunID              string           `json:"run_id"`
-	ScenarioID         string           `json:"scenario_id"`
-	Groups             []string         `json:"groups"`
-	GroupSummaries     []GroupSummary   `json:"group_summaries"`
-	FinalByGroup       []GroupFinal     `json:"final_by_group"`
-	TotalTurns         int              `json:"total_turns"`
-	SuccessTurns       int              `json:"success_turns"`
-	FailedTurns        int              `json:"failed_turns"`
-	RetryCount         int              `json:"retry_count"`
-	AvgLatencyMS       int64            `json:"avg_latency_ms"`
-	TotalKeep          int              `json:"total_keep"`
-	TotalDiscard       int              `json:"total_discard"`
-	FinalMemoryCount   int              `json:"final_memory_count"`
-	GeneratedAt        string           `json:"generated_at"`
-	ReasonCounts       map[string]int   `json:"reason_counts"`
-	Turns              []TurnSummary    `json:"turns"`
-	FinalContext       string           `json:"final_context"`
-	FinalAnswer        string           `json:"final_answer"`
-	FinalQuestions     []Question       `json:"final_questions"`
-	Findings           []string         `json:"findings"`
-	SourceFiles        []string         `json:"source_files"`
-	HasFailures        bool             `json:"has_failures"`
-	HasBFMA            bool             `json:"has_bfma"`
-	LatencyByTurn      []ChartPoint     `json:"latency_by_turn"`
-	MemoryByTurn       []ChartPoint     `json:"memory_by_turn"`
-	KeepDiscardByTurn  []DecisionPoint  `json:"keep_discard_by_turn"`
-	BudgetByTurn       []BudgetPoint    `json:"budget_by_turn"`
-	ReasonDistribution []Distribution   `json:"reason_distribution"`
-	GroupLatency       []ChartPoint     `json:"group_latency"`
-	GroupAnswerSize    []ChartPoint     `json:"group_answer_size"`
-	GroupCoverage      []ChartPoint     `json:"group_coverage"`
-	GroupContextSize   []ChartPoint     `json:"group_context_size"`
-	MemoryPressure     []MemoryPressure `json:"memory_pressure"`
+	RunID                string                    `json:"run_id"`
+	ScenarioID           string                    `json:"scenario_id"`
+	Groups               []string                  `json:"groups"`
+	GroupSummaries       []GroupSummary            `json:"group_summaries"`
+	FinalByGroup         []GroupFinal              `json:"final_by_group"`
+	TotalTurns           int                       `json:"total_turns"`
+	SuccessTurns         int                       `json:"success_turns"`
+	FailedTurns          int                       `json:"failed_turns"`
+	RetryCount           int                       `json:"retry_count"`
+	AvgLatencyMS         int64                     `json:"avg_latency_ms"`
+	TotalKeep            int                       `json:"total_keep"`
+	TotalDiscard         int                       `json:"total_discard"`
+	FinalMemoryCount     int                       `json:"final_memory_count"`
+	GeneratedAt          string                    `json:"generated_at"`
+	ReasonCounts         map[string]int            `json:"reason_counts"`
+	Turns                []TurnSummary             `json:"turns"`
+	FinalContext         string                    `json:"final_context"`
+	FinalAnswer          string                    `json:"final_answer"`
+	FinalQuestions       []Question                `json:"final_questions"`
+	Findings             []string                  `json:"findings"`
+	SourceFiles          []string                  `json:"source_files"`
+	HasFailures          bool                      `json:"has_failures"`
+	HasBFMA              bool                      `json:"has_bfma"`
+	LatencyByTurn        []ChartPoint              `json:"latency_by_turn"`
+	MemoryByTurn         []ChartPoint              `json:"memory_by_turn"`
+	KeepDiscardByTurn    []DecisionPoint           `json:"keep_discard_by_turn"`
+	BudgetByTurn         []BudgetPoint             `json:"budget_by_turn"`
+	ReasonDistribution   []Distribution            `json:"reason_distribution"`
+	GroupLatency         []ChartPoint              `json:"group_latency"`
+	GroupAnswerSize      []ChartPoint              `json:"group_answer_size"`
+	GroupCoverage        []ChartPoint              `json:"group_coverage"`
+	GroupContextSize     []ChartPoint              `json:"group_context_size"`
+	MemoryPressure       []MemoryPressure          `json:"memory_pressure"`
+	EvaluationAvailable  bool                      `json:"evaluation_available"`
+	EvaluationGroups     []evaluation.GroupMetrics `json:"evaluation_groups,omitempty"`
+	EvaluationConclusion []string                  `json:"evaluation_conclusion,omitempty"`
+	EvaluationWarnings   []string                  `json:"evaluation_warnings,omitempty"`
 }
 
 type TurnSummary struct {
@@ -198,7 +203,16 @@ func LoadRun(runDir string) (Data, error) {
 	if len(entries) == 0 {
 		return Data{}, fmt.Errorf("no JSONL turn logs found under %s", runDir)
 	}
-	return aggregate(entries, files), nil
+	data := aggregate(entries, files)
+	if evalResult, evalErr := evaluation.Evaluate(evaluation.Options{RunDir: runDir}); evalErr == nil {
+		data.EvaluationAvailable = true
+		data.EvaluationGroups = evalResult.Groups
+		data.EvaluationConclusion = evalResult.Conclusion
+		data.EvaluationWarnings = evalResult.Warnings
+	} else {
+		data.EvaluationWarnings = append(data.EvaluationWarnings, fmt.Sprintf("evaluación formal no disponible: %v", evalErr))
+	}
+	return data, nil
 }
 
 func Render(w io.Writer, data Data) error {

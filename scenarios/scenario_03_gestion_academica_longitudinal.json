@@ -218,5 +218,26 @@
       "usar colores o reglas del inventario de laptops para definir la arquitectura académica",
       "tratar el inventario de laptops como módulo académico"
     ]
+  },
+  "evaluation": {
+    "false_memory_traps": [
+      "inventario de laptops como módulo académico",
+      "código patrimonial como entidad académica",
+      "garantía de laptops dentro del sistema académico",
+      "proveedor de laptops dentro del sistema académico",
+      "colores del inventario para definir la arquitectura académica"
+    ],
+    "subem_entities": [
+      "Sistema de Gestión Académica Universitaria para la FIIS",
+      "registro de notas",
+      "docentes",
+      "estudiantes",
+      "plan de estudios",
+      "matrícula académica",
+      "correo institucional",
+      "auditoría común",
+      "prerrequisitos antes de matrícula",
+      "rectificación aprobada por coordinador"
+    ]
   }
 }

@@ -264,6 +264,7 @@ const htmlTemplate = `<!doctype html>
       <a class="toc-link" href="#resumen">📌 Resumen</a>
       <a class="toc-link" href="#comparacion">🧪 Comparación G1/G2/G3</a>
       <a class="toc-link" href="#charts">📊 Cuadros comparativos</a>
+      <a class="toc-link" href="#tesis-metrics">📐 Métricas de tesis</a>
       <a class="toc-link" href="#metodologia">💡 Lectura metodológica</a>
       <a class="toc-link" href="#respuestas">📝 Respuestas finales</a>
       <a class="toc-link" href="#anexos">📎 Anexos</a>
@@ -288,7 +289,7 @@ const htmlTemplate = `<!doctype html>
         </div>
         <div class="notion-callout">
           <span class="emoji">⚠️</span>
-          <p><b>Cobertura automática estimada:</b> es una ayuda visual exploratoria. No debe presentarse como QA Accuracy formal.</p>
+          <p><b>Reporte demo técnico:</b> la cobertura visual es exploratoria. Las métricas F1/SubEM/falsas memorias/contradicciones se calculan en una sección separada y sirven para validar instrumentación, no para contrastar todavía la hipótesis.</p>
         </div>
       </header>
 
@@ -301,6 +302,17 @@ const htmlTemplate = `<!doctype html>
         <h2>Comparación experimental por grupo</h2>
         <p class="muted">Lectura rápida para asesor: G1 resume, G2 acumula memoria y G3 selecciona contexto bajo presupuesto.</p>
         <div class="grid group-cards" id="groupCards"></div>
+      </section>
+
+      <section class="notion-block" id="tesis-metrics">
+        <h2>Métricas exploratorias alineadas a la matriz de consistencia</h2>
+        <div class="notion-callout">
+          <span class="emoji">📐</span>
+          <div id="thesisConclusion"></div>
+        </div>
+        <div class="details-body table-wrap">
+          <table id="thesisMetricsTable"></table>
+        </div>
       </section>
 
       <section class="notion-block" id="charts">
@@ -410,6 +422,7 @@ const htmlTemplate = `<!doctype html>
       ].join("");
       document.getElementById("findings").innerHTML = DATA.findings.map(x => "<li>"+esc(x)+"</li>").join("");
       renderGroupComparison();
+      renderThesisMetrics();
       renderMethodology();
       renderFinalComparison();
       renderTurnTable();
@@ -461,12 +474,39 @@ const htmlTemplate = `<!doctype html>
       }).join("");
       document.getElementById("groupCards").innerHTML = cards || '<p class="muted">No hay grupos para comparar.</p>';
     }
+    function renderThesisMetrics() {
+      const conclusion = DATA.evaluation_conclusion || [];
+      const warnings = DATA.evaluation_warnings || [];
+      const groups = DATA.evaluation_groups || [];
+      const intro = DATA.evaluation_available
+        ? conclusion.map(x => '<li>' + esc(x) + '</li>').join('')
+        : '<li>No se pudo calcular la evaluación formal desde los logs y el escenario.</li>';
+      const warningList = warnings.length
+        ? '<h4>Advertencias</h4><ul class="findings">' + warnings.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>'
+        : '';
+      document.getElementById("thesisConclusion").innerHTML = '<ul class="findings">' + intro + '</ul>' + warningList;
+      const rows = groups.map(g => '<tr>'
+        + '<td class="mono">' + esc(g.architecture) + '</td>'
+        + '<td>' + Number(g.avg_f1 || 0).toFixed(4) + '</td>'
+        + '<td>' + Number(g.subem_hits || 0) + '/' + Number(g.subem_total || 0) + ' (' + Number(g.subem_rate || 0).toFixed(4) + ')</td>'
+        + '<td>' + Number(g.false_memory_hits || 0) + '/' + Number(g.false_memory_total || 0) + ' (' + Number(g.false_memory_rate || 0).toFixed(4) + ')</td>'
+        + '<td>' + Number(g.contradiction_hits || 0) + '/' + Number(g.contradiction_total || 0) + ' (' + Number(g.contradiction_rate || 0).toFixed(4) + ')</td>'
+        + '<td>' + Number(g.avg_memory_tokens || 0).toFixed(1) + '</td>'
+        + '<td>' + Number(g.avg_storage_items || 0).toFixed(1) + '</td>'
+        + '<td>' + fmtMs(Math.round(g.avg_latency_ms || 0)) + '</td>'
+        + '<td>' + esc(g.interpretation || '') + '</td>'
+        + '</tr>').join('');
+      document.getElementById("thesisMetricsTable").innerHTML = '<thead><tr><th>Arquitectura</th><th>F1</th><th>SubEM entidades</th><th>Falsas memorias detectadas</th><th>Contradicciones detectadas</th><th>Tokens memoria</th><th>Almacenamiento</th><th>Latencia</th><th>Lectura</th></tr></thead><tbody>'
+        + (rows || '<tr><td colspan="9">Sin métricas exploratorias disponibles.</td></tr>')
+        + '</tbody>';
+    }
     function renderMethodology() {
       const hasAll = DATA.groups.includes("g1") && DATA.groups.includes("g2") && DATA.groups.includes("g3");
       const lines = [
         "G1 representa el baseline con resumen incremental: la memoria se comprime y puede sufrir summary drift.",
         "G2 representa memoria persistente: conserva más información, pero puede arrastrar ruido u obsolescencia.",
         "G3 representa BFMA: selecciona el contexto por utilidad y presupuesto, por eso no compite por recordar más sino por recordar lo relevante.",
+        "El olvido presupuestado observado en este demo significa exclusión del contexto activo, no borrado permanente del almacén de memoria.",
         hasAll ? "Este run contiene G1, G2 y G3; por lo tanto sirve como evidencia comparativa visual." : "Este run no contiene todos los grupos; usarlo como evidencia parcial."
       ];
       document.getElementById("methodology").innerHTML = '<ul class="findings">' + lines.map(x => '<li>' + esc(x) + '</li>').join("") + '</ul>';

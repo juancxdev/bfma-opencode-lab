@@ -50,6 +50,29 @@ go run ./cmd/bfma-pilot \
   --timeout 10m
 ```
 
+
+## Evaluación exploratoria alineada a tesis
+
+El reporte visual sigue siendo útil para demo técnico, pero la matriz de consistencia requiere métricas explícitas. Para convertir los logs en métricas exploratorias de F1, SubEM, falsas memorias, contradicciones, tokens, almacenamiento y latencia:
+
+```bash
+go run ./cmd/bfma-evaluate \
+  --run logs/run_20260615_172800 \
+  --out results/run_20260615_172800
+```
+
+El comando genera:
+
+- `metrics.csv`: dataset tabular por arquitectura, réplica y pregunta final.
+- `summary.json`: resumen por arquitectura y advertencias.
+- `conclusion.md`: lectura metodológica breve para anexo o informe.
+
+Estas métricas son exploratorias para validar instrumentación. No sustituyen el experimento confirmatorio con múltiples escenarios, réplicas emparejadas, orden aleatorizado y modelo mixto:
+
+```text
+F1 ~ arquitectura + orden + (1 | escenario/réplica)
+```
+
 ## Reporte visual para asesor/anexos
 
 Para generar un dashboard HTML autocontenido desde los logs JSONL:
